@@ -29,17 +29,53 @@ Bereich	Funktionen
 
 📸 Screenshots
 
-| Main Window | Einstellungen |
-|-------------|----------|
-| ![Screenshot 1](screenshots/screenshot_AnyNasPy1.png) | ![Screenshot 1](screenshots/screenshot_AnyNasPy2.png)|
+<table>
+<tr>
+<td align="center">
+<b>Server Offline</b><br>
+<img src="screenshots/screenshot_AnyNasPy1.png" width="400">
+</td>
+<td align="center">
+<b>Server Online</b><br>
+<img src="screenshots/screenshot_AnyNasPy2.png" width="400">
+</td>
+</tr>
+</table>
 
+---
 
-![Screenshot 1](screenshots/screenshot_AnyNasPy1.png)
+<details>
+<summary><b>Screenshots anzeigen</b></summary>
 
-![Screenshot 1](screenshots/screenshot_AnyNasPy2.png)
+<br>
 
-![Screenshot 3](screenshots/screenshot3.png)⸻
+<table>
+<tr>
+<td align="center">
+<b>Beschreibung von Screenshot 3</b><br>
+<img src="screenshots/screenshot_AnyNasPy3.png" width="400">
+</td>
+<td align="center">
+<b>Beschreibung von Screenshot 4</b><br>
+<img src="screenshots/screenshot_AnyNasPy4.png" width="400">
+</td>
+</tr>
 
+<tr>
+<td align="center">
+<b>Beschreibung von Screenshot 5</b><br>
+<img src="screenshots/screenshot_AnyNasPy5.png" width="400">
+</td>
+<td align="center">
+<b>Beschreibung von Screenshot 6</b><br>
+<img src="screenshots/screenshot_AnyNasPy6.png" width="400">
+</td>
+</tr>
+
+</table>
+
+</details>
+---
 <details>
 <summary><strong>🌍 Unterstützte NAS-Systeme</strong></summary>
 

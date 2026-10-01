@@ -15,15 +15,25 @@ Seit Version 2.3.0 unterstützt AnyNasPy nicht mehr ausschließlich Synology, so
 Bereich	Funktionen
 
 🖥️ NAS-Verwaltung	Wake-on-LAN, sicheres Herunterfahren, automatische Erkennung
+
 🌍 Hersteller	13 NAS-Plattformen und generisches Linux/macOS/Windows Server
+
 💾 Volumes	SMB-Volumes erkennen, mounten und auswerfen
+
 ⏰ Zeitsteuerung	Automatisches Herunterfahren, Countdown und Coffee-Modus
+
 ☕ Coffee-Modus	Mac wach halten, ohne NAS oder Mac herunterzufahren
+
 👥 Profile	Beliebig viele NAS-Serverprofile
+
 🔐 Sicherheit	SSH-Schlüssel, macOS-Schlüsselbund, lokale Kommunikation
+
 🔊 Sprachausgabe	17 Sprachen mit passenden macOS-Stimmen
+
 🌐 Netzwerk	Bonjour/mDNS, DNS, ARP, Netzwerksuche und manuelle IP
+
 🌍 Sprache	17 vollständig unterstützte Benutzeroberflächensprachen
+
 🍎 macOS	Native Benutzeroberfläche und macOS-Integration
 
 ⸻

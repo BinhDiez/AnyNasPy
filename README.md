@@ -518,7 +518,8 @@ Den Pfad gegebenenfalls an den tatsächlichen Speicherort der Anwendung anpassen
 <details>
 <summary><strong>🛠️ Fehlerbehebung</strong></summary>
 
-NAS wird nicht gefunden
+
+## NAS wird nicht gefunden
 
 * IP-Adresse über die Suchfunktion ermitteln.
 * Prüfen, ob das NAS eingeschaltet ist.
@@ -526,7 +527,9 @@ NAS wird nicht gefunden
 * DNS-/Bonjour-Erkennung prüfen.
 * IP-Adresse gegebenenfalls manuell eintragen.
 
-Wake-on-LAN funktioniert nicht
+---
+
+## Wake-on-LAN funktioniert nicht
 
 * MAC-Adresse überprüfen.
 * Wake-on-LAN am NAS aktivieren.
@@ -535,7 +538,9 @@ Wake-on-LAN funktioniert nicht
 
 AnyNasPy verwendet mehrere Methoden für Wake-on-LAN und kann dadurch unterschiedliche Netzwerkkonfigurationen berücksichtigen.
 
-Volume kann nicht gemountet werden
+---
+
+## Volume kann nicht gemountet werden
 
 * Prüfen, ob das NAS erreichbar ist.
 * SMB-Dienst überprüfen.
@@ -543,7 +548,9 @@ Volume kann nicht gemountet werden
 * Mount-Wiederholungen in den Einstellungen erhöhen.
 * Prüfen, ob das Volume bereits gemountet ist.
 
-SSH-Verbindung funktioniert nicht
+---
+
+## SSH-Verbindung funktioniert nicht
 
 Prüfen:
 

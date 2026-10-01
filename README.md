@@ -55,7 +55,7 @@ Bereich	Funktionen
 <tr>
 <td align="center" valign="top">
 <b>Zeitgesteuertes Herunterfahren</b><br>
-<img src="screenshots/screenshot_AnyNasPy13.png" width="400">
+<img src="screenshots/screenshot_AnyNasPy14.png" width="400">
 </td>
 <td align="center" valign="top">
 <bCaffeinate Optionen</b><br>
@@ -64,24 +64,6 @@ Bereich	Funktionen
 </tr>
 </table>
 
-<details>
-<summary><b>📸 weitere Screenshots anzeigen</b></summary>
-
-<br>
-
-
-<table>
-<tr>
-<td align="center" valign="top">
-<b>Zeitgesteuertes Herunterfahren</b><br>
-<img src="screenshots/screenshot_AnyNasPy13.png" width="400">
-</td>
-<td align="center" valign="top">
-<b>Caffeinate Optionen</b><br>
-<img src="screenshots/screenshot_AnyNasPy3.png" width="400">
-</td>
-</tr>
-</table>
 
 <br>
 
@@ -99,6 +81,19 @@ Bereich	Funktionen
 </tr>
 </table>
 
+
+<table>
+<tr>
+<td align="center" valign="top">
+<b>Laufwerke</b><br>
+<img src="screenshots/screenshot_AnyNasPy7.png" width="400">
+</td>
+<td align="center" valign="top">
+<b>Zeiteinstellungen</b><br>
+<img src="screenshots/screenshot_AnyNasPy8.png" width="400">
+</td>
+</tr>
+</table>
 
 
 

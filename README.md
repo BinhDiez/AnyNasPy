@@ -1,311 +1,822 @@
-# SyNasPy
+AnyNasPy
 
-## A modern macOS application for managing Synology NAS servers.
+Universelle NAS-Verwaltung für macOS
 
-Wake up your NAS, shut it down safely, mount SMB volumes, manage multiple servers, and automate common tasks — all from a clean and intuitive macOS interface.
+AnyNasPy ist eine native macOS-Anwendung zur komfortablen Verwaltung von NAS-Systemen verschiedener Hersteller.
 
----
+NAS aufwecken, Verbindungen herstellen, SMB-Volumes verwalten, das NAS sicher herunterfahren, zeitgesteuerte Aktionen planen und mehrere Serverprofile verwalten – alles über eine übersichtliche macOS-Oberfläche.
 
-## 📸 Screenshots
+Seit Version 2.3.0 unterstützt AnyNasPy nicht mehr ausschließlich Synology, sondern eine Vielzahl verschiedener NAS-Plattformen.
 
-| Main Window | Settings |
+⸻
+
+✨ Funktionen im Überblick
+
+Bereich	Funktionen
+🖥️ NAS-Verwaltung	Wake-on-LAN, sicheres Herunterfahren, automatische Erkennung
+🌍 Hersteller	13 NAS-Plattformen und generisches Linux/macOS/Windows Server
+💾 Volumes	SMB-Volumes erkennen, mounten und auswerfen
+⏰ Zeitsteuerung	Automatisches Herunterfahren, Countdown und Coffee-Modus
+☕ Coffee-Modus	Mac wach halten, ohne NAS oder Mac herunterzufahren
+👥 Profile	Beliebig viele NAS-Serverprofile
+🔐 Sicherheit	SSH-Schlüssel, macOS-Schlüsselbund, lokale Kommunikation
+🔊 Sprachausgabe	17 Sprachen mit passenden macOS-Stimmen
+🌐 Netzwerk	Bonjour/mDNS, DNS, ARP, Netzwerksuche und manuelle IP
+🌍 Sprache	17 vollständig unterstützte Benutzeroberflächensprachen
+🍎 macOS	Native Benutzeroberfläche und macOS-Integration
+
+⸻
+
+📸 Screenshots
+
+| Main Window | Einstellungen |
 |-------------|----------|
 | <img width="420" alt="Server Offline" src="https://github.com/user-attachments/assets/2598c7c9-7256-4ea4-94f7-800d95f60989"> | <img width="420" alt="Settings" src="https://github.com/user-attachments/assets/514809e4-b9a4-48c7-bb67-4d7039fc147c"> |
 
----
+⸻
 
-# ✨ Features
+<details>
+<summary><strong>🌍 Unterstützte NAS-Systeme</strong></summary>
 
-## 🚀 NAS Management
+AnyNasPy erkennt NAS-Systeme automatisch und verwendet nach Möglichkeit herstellerspezifische Befehle.
 
-- Wake-on-LAN (WOL) support
-- Safe NAS shutdown
-- Optional Mac shutdown after NAS shutdown
-- Automatic startup and shutdown timers
-- Configurable countdown delays
-- Pause and resume active timers
+Unterstützte Hersteller
 
----
+* Synology
+* QNAP
+* TrueNAS / FreeNAS
+* Unraid
+* OpenMediaVault
+* Asustor
+* Western Digital
+* Buffalo
+* Thecus
+* Generisches Linux
+* macOS Server
+* Windows Server
+* Benutzerdefiniert
 
-## 💾 Volume Management
+Die Herstellererkennung erfolgt über SSH und wertet unter anderem folgende Informationen aus:
 
-- Mount SMB network volumes
-- Unmount selected volumes
-- Individual volume selection
-- Automatic volume handling after NAS startup
+* /etc/os-release
+* /etc/synoinfo.conf
+* /etc/config/uLinux.conf
+* uname -a
 
----
+Bei der Erkennung wird eine Fallback-Kette verwendet. Wenn ein herstellerspezifischer Shutdown-Befehl nicht funktioniert, werden alternative Befehle versucht.
 
-## 🖥️ Multi-Server Support
+Damit kann AnyNasPy auch mit NAS-Systemen und Servern umgehen, die nicht explizit zu einem der unterstützten Hersteller gehören.
 
-- Unlimited server profiles
-- Fast profile switching
-- Create new profiles
-- Duplicate existing profiles
-- Rename profiles
-- Delete profiles
-- Set default profile
+</details>
 
----
+⸻
 
-## 🔐 Security
+<details>
+<summary><strong>🚀 NAS-Verwaltung</strong></summary>
 
-- SSH key authentication
-- No passwords stored
-- Secure SSH communication
-- Optional SSH key generation assistant
-- Open the local `.ssh` directory directly from the application
+Wake-on-LAN
 
----
+* Wake-on-LAN-Unterstützung
+* Automatische Ermittlung der IP-Adresse
+* MAC-Adresserkennung per ping und arp
+* Mehrere WOL-Methoden als Fallback
+* Konfigurierbare Wartezeit nach dem Aufwecken
 
-## 🌐 Network Features
+Herunterfahren
 
-- Automatic IP detection
-- Bonjour / mDNS discovery
-- DNS lookup
-- ARP lookup
-- Network scanning fallback
-- Manual IP configuration
+AnyNasPy verwendet je nach erkanntem System geeignete Shutdown-Befehle.
 
----
+Zusätzlich können eigene Befehle hinterlegt werden:
 
-## 🌍 Languages
+Befehl1;Befehl2;Befehl3
 
-SyNasPy is available in **17 languages**:
+Die Befehle werden nacheinander als Fallback-Kette ausgeführt.
 
-- 🇸🇦 Arabic (العربية)
-- 🇨🇿 Czech (Čeština)
-- 🇳🇱 Dutch (Nederlands)
-- 🇬🇧 English (English)
-- 🇫🇮 Finnish (Suomi)
-- 🇫🇷 French (Français)
-- 🇩🇪 German (Deutsch)
-- 🇬🇷 Greek (Ελληνικά)
-- 🇮🇹 Italian (Italiano)
-- 🇳🇴 Norwegian (Norsk)
-- 🇵🇱 Polish (Polski)
-- 🇵🇹 Portuguese (Português)
-- 🇷🇺 Russian (Русский)
-- 🇪🇸 Spanish (Español)
-- 🇸🇪 Swedish (Svenska)
-- 🇹🇷 Turkish (Türkçe)
-- 🇻🇳 Vietnamese (Tiếng Việt)
+Dies ermöglicht auch die Unterstützung exotischer oder individuell konfigurierter NAS-Systeme.
 
->Note: The translations were created with the help of AI. As a result, they may contain linguistic inaccuracies or unclear wording.
+Herunterfahren des Mac
 
----
+Das Herunterfahren des Macs kann optional nach dem erfolgreichen Herunterfahren des NAS erfolgen.
 
-## 🎨 User Experience
+</details>
 
-- Native macOS interface
-- Modern dark appearance
-- Voice feedback (macOS)
-- Progress indicator with percentage
-- Keyboard shortcuts
-- Automatic update checker
-- Background update notifications
-- Responsive user interface
+⸻
 
----
+<details>
+<summary><strong>💾 Volume-Verwaltung</strong></summary>
 
-# ⌨️ Keyboard Shortcuts
+AnyNasPy erkennt SMB-Volumes abhängig vom verwendeten NAS-System automatisch.
 
-| Shortcut | Action |
-|----------|--------|
-| ⌘ E | Open Settings |
-| Enter | Confirm |
-| Esc | Cancel |
+Herstellerspezifische Pfade
 
----
+Beispiele:
 
-# ⚙️ Requirements
+System	Typische Pfade
+Synology	/volume1, /volume2, …
+QNAP	/share, /share/CACHEDEV1_DATA
+TrueNAS	/mnt
+Unraid	/mnt/user
 
-- macOS
-- Synology NAS
-- SSH enabled on the NAS
-- SMB file sharing enabled (for volume management)
-- Wake-on-LAN enabled (recommended)
+Falls die primäre Erkennung nicht erfolgreich ist, wird als Fallback smbclient verwendet.
 
----
+Funktionen
 
-# 🔒 Privacy & Security
+* Automatische Volume-Erkennung
+* Auswahl einzelner Volumes
+* SMB-Volumes mounten
+* Volumes sicher auswerfen
+* Automatisches Mounten nach dem NAS-Start
+* Erkennung von bereits vorhandenen Volumes
+* Tolerierung spezieller System-Volumes wie home und homes
 
-SyNasPy communicates directly with your Synology NAS.
+Die Auswurf-Logik verwendet mehrere Stufen:
 
-The application:
+diskutil unmount
+        ↓
+diskutil unmount force
+        ↓
+umount -f
 
-- never stores your passwords
-- uses SSH key authentication
-- keeps private SSH keys on your Mac
-- does not require cloud services
-- performs all communication locally between your Mac and NAS
+Dadurch werden auch Situationen berücksichtigt, in denen macOS oder SMB Verbindungen nicht sofort freigibt.
 
----
+</details>
 
-# 🚀 Typical Workflow
+⸻
 
-1. Launch SyNasPy.
-2. Select your NAS profile.
-3. Wake your NAS using Wake-on-LAN.
-4. Wait until the NAS becomes available.
-5. Automatically mount selected SMB volumes.
-6. Work as usual.
-7. Shut down the NAS safely when finished.
-8. Optionally shut down your Mac afterwards.
+<details>
+<summary><strong>⏰ Zeitsteuerung & Automatisierung</strong></summary>
 
----
+Zeitgesteuertes Herunterfahren
 
-# ⭐ Highlights
+Über einen eigenen Dialog kann ein zeitgesteuerter Auftrag eingerichtet werden.
 
-- Designed specifically for Synology NAS
-- Native macOS experience
-- Multiple NAS profiles
-- Intelligent network detection
-- SSH key authentication
-- Automatic volume management
-- Timer automation
-- 17 interface languages
-- No subscription
-- No telemetry
-- No cloud dependency
+Mögliche Ziele:
 
----
+* Mac + NAS
+* Nur NAS
+* Nur Mac
+* Nichts herunterfahren
 
-# 📦 Installation
+Die Wartezeit kann frei gewählt werden:
 
-1. Download the latest release.
-2. Move **SyNasPy.app** to the **Applications** folder.
-3. Launch the application. (follow the Instruction in the included manual)
-4. Configure your NAS profile.
-5. Enjoy.
+1 Minute bis 720 Stunden (30 Tage)
 
----
+Während des Countdowns wird die verbleibende Zeit im Hauptfenster angezeigt.
 
-# ⚙️ Configuration
+Ein laufender Countdown kann durch erneutes Klicken auf den Timer-Button abgebrochen werden.
 
-Settings Dialog Tabs
+Echte Timer-Pause
 
-Tab Content
-General Language selection, NAS credentials, SSH key path (with folder open and key creation buttons).
-Volumes List of SMB volumes (one per line). The first volume is the main volume and cannot be unchecked.
-Timing Auto‑shutdown delay, auto‑start delay, WOL wait, SMB wait, mount retries, and delay between NAS‑ and Mac‑shutdown (0–30 seconds).
-Server Profiles Manage all profiles: create, duplicate, rename, delete, and set the active profile.
+Der automatische Timer kann pausiert und anschließend fortgesetzt werden.
 
-Configuration Files
+Beim Fortsetzen wird die zuvor verbleibende Zeit verwendet – der Timer beginnt nicht wieder bei null.
 
-All settings are stored in ~/Library/Application Support/SyNasPy/:
+Coffee-Modus
 
-- synaspy_config.json – global settings (language, logo, etc.).
-- server_profiles.json – all server profiles (including the active profile ID).
+Der Coffee-Modus hält den Mac für einen definierten Zeitraum wach, ohne anschließend NAS oder Mac herunterzufahren.
 
-Log Files
+Dabei wird Apples caffeinate verwendet.
 
-Logs are written to ~/Library/Application Support/SyNasPy/Logs/ with automatic rotation (max 5 files).
+Geeignet beispielsweise für:
 
----
+* Backup-Skripte
+* längere Datenübertragungen
+* Exporte
+* Downloads
+* Wartungsarbeiten
 
-# 🐛 Troubleshooting
+Sprachausgabe
 
-NAS Not Found
+Die verbleibende Zeit kann regelmäßig angesagt werden.
 
-- Use the 🔍 Find IP button in settings.
-- Verify the NAS is powered on and connected to the network.
+Die Sprachausgabe:
 
-WOL Not Working
+* verwendet die zur Sprache passende macOS-Stimme
+* spricht Zahlen in der jeweiligen Sprache aus
+* entfernt Emojis automatisch
+* kann vollständig deaktiviert werden
 
-- Check the MAC address in settings.
-- Ensure the NAS supports WOL and it is enabled.
-- Try different WOL methods (the app tries Python‑based, wakeonlan, and etherwake).
+</details>
 
-Volume Mount Fails
+⸻
 
-- Confirm the NAS is online and SMB service is running.
-- Increase the Mount Retries value in settings.
-- Verify volume names are correct (case‑sensitive).
+<details>
+<summary><strong>👥 Mehrere NAS-Server verwalten</strong></summary>
 
-SSH Connection / Shutdown Issues
+AnyNasPy unterstützt beliebig viele Serverprofile.
 
-- If the app asks for a password or fails, run ssh-add ~/.ssh/id_rsa once (or use the 🔑 Create button to create a dedicated key).
-- Make sure your SSH key is copied to the NAS (ssh‑copy‑id).
-- For sudo shutdown, ensure the user has NOPASSWD for /sbin/shutdown, /sbin/poweroff, and /usr/syno/bin/synopoweroff in /etc/sudoers.
+Für jedes NAS können eigene Einstellungen gespeichert werden.
 
----
+Profilfunktionen
 
-# 🏗️ Architecture
+* Neues Profil erstellen
+* Profil duplizieren
+* Profil umbenennen
+* Profil löschen
+* Profil aktivieren
+* Standardprofil festlegen
 
-```
-SyNasPy/
-├── SyNasPy.py             # Main application
-├── requirements.txt       # Dependencies
-├── README.md              # This file
-├── LICENSE                # MIT License
-├── BinhDiez.png           # Application logo
-├── SyNasPy.png            # Application icon
+Dadurch können beispielsweise NAS-Systeme zu Hause, im Büro oder an verschiedenen Standorten separat verwaltet werden.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>🔐 Sicherheit</strong></summary>
+
+AnyNasPy verwendet SSH zur Kommunikation mit dem NAS.
+
+SSH-Schlüssel
+
+Unterstützt werden:
+
+* SSH-Key-Authentifizierung
+* vorhandene SSH-Schlüssel
+* Erstellung eines neuen SSH-Schlüssels
+* Schlüssel mit Passphrase
+* Verwendung von ssh-add
+
+Private Schlüssel verbleiben auf dem Mac.
+
+macOS-Schlüsselbund
+
+Für das Herunterfahren des Macs kann das Administratorpasswort sicher im macOS-Schlüsselbund gespeichert werden.
+
+Das Passwort:
+
+* wird nicht im Klartext in der Konfiguration gespeichert
+* verlässt den Mac nicht
+* kann jederzeit über die Einstellungen gelöscht bzw. zurückgesetzt werden
+
+Keine Cloud-Abhängigkeit
+
+AnyNasPy benötigt keinen Cloud-Dienst für die Kommunikation mit dem NAS.
+
+Die Kommunikation erfolgt direkt zwischen Mac und NAS.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>🌐 Netzwerkfunktionen</strong></summary>
+
+Für die Erkennung und Verbindung eines NAS stehen mehrere Methoden zur Verfügung:
+
+* Bonjour / mDNS
+* DNS-Auflösung
+* ARP
+* Ping
+* Netzwerksuche als Fallback
+* manuelle IP-Adresse
+
+Dadurch kann AnyNasPy auch dann eine Verbindung herstellen, wenn eine einzelne Erkennungsmethode nicht funktioniert.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>🌍 Unterstützte Sprachen</strong></summary>
+
+AnyNasPy unterstützt derzeit 17 Sprachen:
+
+* 🇩🇪 Deutsch
+* 🇬🇧 Englisch
+* 🇸🇦 Arabisch
+* 🇨🇿 Tschechisch
+* 🇬🇷 Griechisch
+* 🇪🇸 Spanisch
+* 🇫🇷 Französisch
+* 🇮🇹 Italienisch
+* 🇳🇱 Niederländisch
+* 🇳🇴 Norwegisch
+* 🇵🇱 Polnisch
+* 🇵🇹 Portugiesisch
+* 🇷🇺 Russisch
+* 🇫🇮 Finnisch
+* 🇸🇪 Schwedisch
+* 🇹🇷 Türkisch
+* 🇻🇳 Vietnamesisch
+
+Auch Dialoge, Meldungen, Tooltips und Sprachausgabe berücksichtigen die ausgewählte Sprache.
+
+Hinweis: Die Übersetzungen wurden teilweise mit Unterstützung von KI erstellt. Trotz sorgfältiger Prüfung können einzelne sprachliche Ungenauigkeiten oder ungewöhnliche Formulierungen enthalten sein.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>🎨 Benutzeroberfläche</strong></summary>
+
+AnyNasPy verwendet eine native macOS-Oberfläche mit Fokus auf eine übersichtliche Bedienung.
+
+Hauptfenster
+
+* Statusanzeige
+* Fortschrittsanzeige
+* NAS-Aktionen
+* Timer-Anzeige
+* Profil-Auswahl
+* übersichtliche Aktionsbuttons
+
+Einstellungen
+
+Die Einstellungen sind in verschiedene Bereiche gegliedert:
+
+Bereich	Inhalt
+Allgemein	Sprache, NAS-Daten, SSH-Schlüssel
+NAS-Hersteller	Hersteller, automatische Erkennung, eigene Shutdown-Befehle
+Volumes	SMB-Volumes und automatische Volume-Erkennung
+Zeitsteuerung	Timer, Wartezeiten und Mount-Verhalten
+Serverprofile	Erstellen, Duplizieren, Umbenennen und Löschen
+
+Die Benutzeroberfläche passt sich auch an kleinere Bildschirme an. Dialoge mit vielen Optionen verfügen über Scrollbereiche, während wichtige Aktionsbuttons sichtbar bleiben.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>⌨️ Tastaturkürzel</strong></summary>
+
+Tastenkombination	Funktion
+⌘ E	Einstellungen öffnen
+Enter	Bestätigen
+Esc	Abbrechen
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>⚙️ Systemanforderungen</strong></summary>
+
+Betriebssystem
+
+* macOS
+* Apple Silicon oder Intel
+
+NAS
+
+AnyNasPy kann mit verschiedenen NAS-Systemen und Serverplattformen verwendet werden.
+
+Für die vollständige Funktionalität werden je nach verwendetem System benötigt:
+
+* SSH-Zugriff
+* SMB-Dateifreigabe für Volume-Verwaltung
+* Wake-on-LAN für das Aufwecken des NAS
+
+Die tatsächlich benötigten Voraussetzungen hängen vom verwendeten NAS-Hersteller und den gewünschten Funktionen ab.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>📦 Installation</strong></summary>
+
+1. Die aktuelle Version aus den GitHub Releases herunterladen.
+2. Das Archiv entpacken.
+3. AnyNasPy.app in den Ordner Programme verschieben.
+4. Anwendung starten.
+5. Ein NAS-Profil konfigurieren.
+6. SSH-Zugriff und gewünschte Optionen einrichten.
+
+Weitere Informationen zur jeweiligen Version befinden sich in den Release Notes.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>🔒 macOS Gatekeeper</strong></summary>
+
+AnyNasPy ist derzeit nicht mit einem Apple-Developer-Zertifikat signiert.
+
+Beim ersten Start kann macOS deshalb die Ausführung blockieren.
+
+App über die Systemeinstellungen freigeben
+
+1. AnyNasPy einmal starten.
+2. Die Warnmeldung schließen.
+3. Systemeinstellungen → Datenschutz & Sicherheit öffnen.
+4. Nach unten scrollen.
+5. Die Meldung über die blockierte Anwendung suchen.
+6. „Dennoch öffnen“ auswählen.
+7. Die Sicherheitsabfrage bestätigen.
+
+Alternativ: Quarantäne-Attribut entfernen
+
+Über das Terminal:
+
+xattr -d com.apple.quarantine '/Users/username/Downloads/AnyNasPy.app'
+
+Den Pfad gegebenenfalls an den tatsächlichen Speicherort der Anwendung anpassen.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>🖥️ Download-Informationen</strong></summary>
+
+Versionen
+
+Dateiendung	Plattform
+_macOS_as	Apple Silicon (M1–M4)
+_macOS_intel	Intel Mac
+
+7z-Archive
+
+Betriebssystem	Empfohlene Anwendung
+🍎 macOS	Keka
+🪟 Windows	7-Zip
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>🔑 Passwort für 7z-Archive</strong></summary>
+BinhDiez
+</details>
+
+⸻
+
+<details>
+<summary><strong>🛠️ Fehlerbehebung</strong></summary>
+
+NAS wird nicht gefunden
+
+* IP-Adresse über die Suchfunktion ermitteln.
+* Prüfen, ob das NAS eingeschaltet ist.
+* Netzwerkverbindung überprüfen.
+* DNS-/Bonjour-Erkennung prüfen.
+* IP-Adresse gegebenenfalls manuell eintragen.
+
+Wake-on-LAN funktioniert nicht
+
+* MAC-Adresse überprüfen.
+* Wake-on-LAN am NAS aktivieren.
+* Prüfen, ob das NAS Wake-on-LAN unterstützt.
+* Netzwerkverbindung überprüfen.
+
+AnyNasPy verwendet mehrere Methoden für Wake-on-LAN und kann dadurch unterschiedliche Netzwerkkonfigurationen berücksichtigen.
+
+Volume kann nicht gemountet werden
+
+* Prüfen, ob das NAS erreichbar ist.
+* SMB-Dienst überprüfen.
+* Namen des Volumes kontrollieren.
+* Mount-Wiederholungen in den Einstellungen erhöhen.
+* Prüfen, ob das Volume bereits gemountet ist.
+
+SSH-Verbindung funktioniert nicht
+
+Prüfen:
+
+ssh-add ~/.ssh/id_rsa
+
+Alternativ kann über den SSH-Schlüssel-Assistenten ein eigener Schlüssel erstellt werden.
+
+Der öffentliche Schlüssel muss auf dem NAS hinterlegt sein.
+
+Shutdown funktioniert nicht
+
+Je nach NAS-System kann ein entsprechender Benutzer bzw. eine entsprechende Berechtigung erforderlich sein.
+
+Bei Synology kann beispielsweise eine NOPASSWD-Regel für die entsprechenden Shutdown-Befehle notwendig sein.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>📁 Konfigurations- und Logdateien</strong></summary>
+
+Die Konfigurationsdateien befinden sich unter:
+
+~/Library/Application Support/AnyNasPy/
+
+Typische Dateien:
+
+AnyNasPy/
+├── synaspy_config.json
+├── server_profiles.json
+└── Logs/
+    ├── ...
+
+Die Logdateien werden automatisch rotiert.
+
+Die Anwendung verwendet sowohl zeit- als auch größenbasierte Mechanismen zur Begrenzung der Logdateien.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>🏗️ Projektstruktur</strong></summary>
+
+Die Anwendung basiert auf Python und PyQt.
+
+Beispielhafte Projektstruktur:
+
+AnyNasPy/
+├── AnyNasPy.py
+├── requirements.txt
+├── README.md
+├── LICENSE
+├── BinhDiez.png
+├── AnyNasPy.png
 └── .gitignore
-```
 
-Key Components
+Zentrale Komponenten
 
-- LanguageManager – Multi‑language support (11 languages).
-- ServerProfile / ServerProfileManager – Profile data and persistence.
-- Config – Central configuration (merges global and profile settings).
-- SyNasPy – Main window and core logic.
-- ConfigDialog – Settings interface (with profile management).
-- InfoDialog – About window with version, licenses, and update checker.
-- AppLogger – Logging with buffering and rotation.
+* LanguageManager – Mehrsprachigkeit
+* ServerProfile – Daten eines NAS-Profils
+* ServerProfileManager – Verwaltung und Speicherung der Profile
+* Config – Zentrale Konfiguration
+* AnyNasPy – Hauptfenster und Kernlogik
+* ConfigDialog – Einstellungsdialog
+* InfoDialog – Informationen, Lizenz und Update-Prüfung
+* AppLogger – Protokollierung und Log-Rotation
 
---
+</details>
 
-# 🙏 Acknowledgments
+⸻
 
-- Synology – For their excellent NAS hardware and DSM.
-- PyQt Team – For the amazing Qt bindings.
-- macOS Community – For helpful system integration tips.
+🔄 Versionsverlauf
 
----
+<details>
+<summary><strong>AnyNasPy 2.3.0 – Universelle NAS-Unterstützung</strong></summary>
 
-# 🔄 Changelog
+🌍 Universelle NAS-Unterstützung
 
-Version 2.0.0 (Current)
+Version 2.3.0 erweitert AnyNasPy von einer primär auf Synology ausgerichteten Anwendung zu einer universellen NAS-Verwaltungslösung.
 
-- Multi‑Server Profiles: Manage any number of NAS devices.
-- 17 Languages: Full UI translation.
-- Profile Management: Create, duplicate, rename, delete, activate.
-- SSH Key Assistant: Open folder, create new key (does not overwrite id_rsa) with optional passphrase.
-- Configurable Shutdown Delay: Adjustable delay between NAS‑ and Mac‑shutdown (0‑30 s).
-- Update Checker: Integrated manual and background update notifications.
-- Improved Shutdown Logic: More reliable NAS shutdown with fallback methods.
-- Removed Obsolete Status File: The boQuitNASapp.txt workaround is no longer used.
-- Enhanced Progress Bar: Shows percentage outside the bar.
+Unterstützt werden jetzt:
 
-Version 1.0.0 (Legacy)
+* Synology
+* QNAP
+* TrueNAS / FreeNAS
+* Unraid
+* OpenMediaVault
+* Asustor
+* Western Digital
+* Buffalo
+* Thecus
+* generisches Linux
+* macOS Server
+* Windows Server
+* Benutzerdefinierte Systeme
 
-- Single NAS management.
-- Basic WOL, shutdown, volume mounting.
-- Initial settings dialog.
+🔧 Automatische Herstellererkennung
 
-# 🤝 Contributing
+* Neuer Button „Auto-erkennen“
+* SSH-basierte Erkennung
+* Auswertung verschiedener Systemdateien
+* Erkennung über uname -a
+* Mustervergleich zur Herstellerbestimmung
+* Rückfrage bei abweichender erkannter Konfiguration
 
-Contributions, bug reports, feature requests, and pull requests are welcome.
+📴 Herstellerabhängige Shutdown-Befehle
 
-If you find a bug or have an idea for improving SyNasPy, please open an issue.
+* Herstellerabhängige Befehle
+* Automatische Fallback-Kette
+* Benutzerdefinierte Befehle
+* Mehrere eigene Befehle mit Semikolon möglich
+* Hilfedialog mit typischen Befehlen
 
----
+💾 Verbesserte Volume-Erkennung
 
-# 📄 License
+Herstellerspezifische Pfade werden bevorzugt verwendet.
 
-This project is licensed under the MIT License.
-Copyright (c) 2026 BinhDiez64.
+Zusätzlicher Fallback über smbclient.
 
-PyQt5 Notice: This application uses PyQt5, which is licensed under the GNU General Public License v3 (GPLv3).
-Copyright (c) Riverbank Computing Limited.
-Full license text: https://www.gnu.org/licenses/gpl-3.0.html
+Während der Erkennung werden verständliche Statusinformationen angezeigt:
 
----
+* „Suche Volumes …“
+* „X Volumes gefunden“
+* „Keine Volumes gefunden“
 
-Made with ❤️ for the NAS community.
+🔍 MAC-Adresserkennung
 
-**SyNasPy makes managing your Synology NAS on macOS simple, secure, and efficient.**
+Über einen neuen Button kann die MAC-Adresse automatisch über ping und arp ermittelt werden.
+
+🛠️ Diagnose und Logging
+
+Verbesserte Fehlermeldungen und detailliertere Logs, unter anderem für:
+
+* nicht erreichbare NAS-Systeme
+* nicht akzeptierte SSH-Schlüssel
+* fehlende SSH-Schlüssel
+* Probleme mit SSH-Schlüsseln mit Passphrase
+
+💿 Verbesserte Auswurf-Logik
+
+Der Auswurf erfolgt jetzt in mehreren Stufen:
+
+diskutil unmount
+        ↓
+diskutil unmount force
+        ↓
+umount -f
+
+Zusätzlich werden automatisch gemountete System-Volumes wie home und homes berücksichtigt.
+
+🐛 Behobene Fehler
+
+* ~ in SSH-Key-Pfaden wurde nicht korrekt expandiert.
+* Bestimmte Zeichen in SSH-Befehlen konnten als Shell-Kommentare interpretiert werden.
+* Fehlende NAS-Volumes konnten die Erkennung blockieren.
+* Beim Duplizieren von Profilen gingen einzelne NAS-Einstellungen verloren.
+* Persönliche Standard-Volume-Namen wurden entfernt.
+* Der bisherige Hilfe-Button wurde durch die automatische Herstellererkennung ersetzt.
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>SyNasPy 2.2.0 – Zeitsteuerung & Coffee-Modus</strong></summary>
+
+⏰ Zeitgesteuertes Herunterfahren
+
+* Neuer Timer für geplante Aktionen
+* Zielauswahl:
+    * Mac + NAS
+    * Nur NAS
+    * Nur Mac
+    * Nichts herunterfahren
+* Wartezeit von 1 Minute bis 720 Stunden
+* Countdown im Hauptfenster
+* Timer kann abgebrochen werden
+* Stündliche Sprachausgabe der verbleibenden Zeit
+
+☕ Coffee-Modus
+
+Der Mac kann für eine definierte Zeit wach gehalten werden.
+
+Dafür wird caffeinate verwendet.
+
+⏸ Auto-Timer pausieren
+
+Der automatische Timer kann pausiert und später exakt an der gespeicherten Position fortgesetzt werden.
+
+🔐 Mac-Shutdown ohne Terminal-Konfiguration
+
+Zwei Möglichkeiten stehen zur Verfügung:
+
+1. NOPASSWD-sudoers-Regel
+2. macOS-Schlüsselbund
+
+Das Administratorpasswort wird verschlüsselt im Schlüsselbund gespeichert.
+
+🌍 Verbesserte Sprachausgabe
+
+* 17 Sprachen
+* passende macOS-Stimmen
+* lokalisierte Aussprache von Zahlen
+* automatische Entfernung von Emojis
+* abschaltbare Sprachausgabe
+
+🛡️ Schutz vor versehentlichem Herunterfahren
+
+Bei einem aktiven Timer wird vor manuellen Shutdown-Aktionen gewarnt.
+
+🛠️ Verbesserte Stabilität
+
+* Robusterer Exception-Handler
+* Stacktrace im Terminal
+* Crash-Datei als Fallback
+* atexit-Handler
+* SIGTERM-Behandlung
+* sauberes Beenden von caffeinate
+* keine zurückbleibenden Zombie-Prozesse
+
+🎨 Verbesserte Benutzeroberfläche
+
+* Dynamische Fensterhöhe
+* zweizeilige Statusanzeige
+* einheitliche Button-Größen
+* Scrollbereich für kleine Bildschirme
+* fixierte Dialogbuttons
+* verbesserte Icons
+* Vorschau für geplante Aktionen
+* übersichtlichere Einstellungen
+
+🌐 Übersetzungen
+
+17 vollständig gepflegte Sprachen mit:
+
+* lokalisierten Dialogen
+* lokalisierten Ja/Nein-Schaltflächen
+* verbessertem Fallback auf Englisch
+* dynamischer Aktualisierung von Tooltips
+
+🐛 Behobene Fehler
+
+Unter anderem:
+
+* Kollision zwischen Auto-Timer und aktivem Zeitgeber
+* falsche Anzeige bei Coffee-Timern
+* falsche Sprachausgabe
+* fehlerhafte Pause-/Play-Funktion
+* fehlerhafte Eject-Warnungen
+* lokalisierte Startup-Dialoge
+* unterschiedliche Zielwerte für den Coffee-Modus
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>SyNasPy 2.0.0</strong></summary>
+
+* Unterstützung mehrerer NAS-Serverprofile
+* 17 Sprachen
+* Profilverwaltung
+* SSH-Schlüssel-Assistent
+* konfigurierbare Shutdown-Verzögerung
+* integrierte Update-Prüfung
+* verbesserte Shutdown-Logik
+* Entfernung der alten boQuitNASapp.txt-Lösung
+* verbesserte Fortschrittsanzeige
+
+</details>
+
+⸻
+
+<details>
+<summary><strong>SyNasPy 1.0.0 – Legacy</strong></summary>
+
+* Verwaltung eines einzelnen NAS
+* Wake-on-LAN
+* NAS-Herunterfahren
+* SMB-Volume-Verwaltung
+* grundlegender Einstellungsdialog
+
+</details>
+
+⸻
+
+🔄 Namensänderung: SyNasPy → AnyNasPy
+
+Ab Version 2.3.0 wurde der Funktionsumfang von SyNasPy grundlegend erweitert.
+
+Die Anwendung ist nicht mehr ausschließlich auf Synology NAS-Systeme ausgerichtet.
+
+Aus diesem Grund wird das Projekt unter dem neuen Namen AnyNasPy weitergeführt.
+
+Die bisherige Versionshistorie bleibt Bestandteil des Projekts.
+
+⸻
+
+🤝 Mitwirken
+
+Beiträge, Fehlerberichte, Verbesserungsvorschläge und Pull Requests sind willkommen.
+
+Wenn du einen Fehler findest oder eine Idee für eine neue Funktion hast, erstelle bitte ein Issue im GitHub-Repository.
+
+⸻
+
+📄 Lizenz
+
+Dieses Projekt steht unter der MIT License.
+
+Copyright © 2026 BinhDiez64.
+
+PyQt5
+
+Diese Anwendung verwendet PyQt5.
+
+PyQt5 steht unter der GNU General Public License (GPLv3).
+
+Weitere Informationen:
+
+https://www.gnu.org/licenses/gpl-3.0.html
+
+⸻
+
+🙏 Danksagung
+
+Vielen Dank an:
+
+* Synology für die hervorragende NAS-Hardware und DSM
+* PyQt für die Qt-Bindings
+* die macOS-Community für hilfreiche Informationen zur Systemintegration
+* die Entwickler der verschiedenen NAS-Plattformen und Open-Source-Projekte
+
+⸻
+
+❤️ AnyNasPy
+
+AnyNasPy macht die Verwaltung von NAS-Systemen unter macOS einfach, sicher und komfortabel.
+
+Von Synology bis QNAP, TrueNAS, Unraid und weiteren Systemen – mit automatischer Erkennung, SMB-Management, Zeitsteuerung und mehreren Serverprofilen.
 
 ---
 
@@ -313,7 +824,7 @@ Made with ❤️ for the NAS community.
 <summary>🔒 macOS Gatekeeper Info</summary>
 
 
-SyNasPy is currently not signed with an Apple Developer certificate.
+AnyNasPy and SyNasPy is currently not signed with an Apple Developer certificate.
 
 When starting the app for the first time, macOS Gatekeeper may block the app from running.
 
@@ -351,7 +862,7 @@ xattr -d com.apple.quarantine '/Users/username/Downloads/SyNasPy.app'
 | Betriebssystem | Empfohlene App |
 |---------------|----------------|
 | 🍎 macOS | **Keka** – <https://www.keka.io/> |
-| 🪟 Windows | **7-Zip** – <https://www.7-zip.org/> |
+
 
 </details>
 
@@ -364,3 +875,16 @@ xattr -d com.apple.quarantine '/Users/username/Downloads/SyNasPy.app'
 
 </details>
 
+
+
+
+
+---
+
+## 📸 Screenshots
+
+| Main Window | Settings |
+|-------------|----------|
+| <img width="420" alt="Server Offline" src="https://github.com/user-attachments/assets/2598c7c9-7256-4ea4-94f7-800d95f60989"> | <img width="420" alt="Settings" src="https://github.com/user-attachments/assets/514809e4-b9a4-48c7-bb67-4d7039fc147c"> |
+
+---

@@ -1,6 +1,6 @@
-AnyNasPy
+# AnyNasPy
 
-Universelle NAS-Verwaltung für macOS
+## Universelle NAS-Verwaltung für macOS
 
 AnyNasPy ist eine native macOS-Anwendung zur komfortablen Verwaltung von NAS-Systemen verschiedener Hersteller.
 

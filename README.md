@@ -613,8 +613,9 @@ Beispielhafte Projektstruktur
 
 AnyNasPy/
 
-* ├── AnyNasPy.py             # Hauptanwendung
-* ├── requirements.txt        # Python-Abhängigkeiten
+├── AnyNasPy.py             # Hauptanwendung
+
+├── requirements.txt        # Python-Abhängigkeiten
 
 ├── README.md               # Projektdokumentation
 

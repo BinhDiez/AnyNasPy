@@ -13,6 +13,7 @@ Seit Version 2.3.0 unterstützt AnyNasPy nicht mehr ausschließlich Synology, so
 ✨ Funktionen im Überblick
 
 Bereich	Funktionen
+
 🖥️ NAS-Verwaltung	Wake-on-LAN, sicheres Herunterfahren, automatische Erkennung
 🌍 Hersteller	13 NAS-Plattformen und generisches Linux/macOS/Windows Server
 💾 Volumes	SMB-Volumes erkennen, mounten und auswerfen

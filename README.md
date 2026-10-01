@@ -6,7 +6,7 @@ AnyNasPy ist eine native macOS-Anwendung zur komfortablen Verwaltung von NAS-Sys
 
 NAS aufwecken, Verbindungen herstellen, SMB-Volumes verwalten, das NAS sicher herunterfahren, zeitgesteuerte Aktionen planen und mehrere Serverprofile verwalten – alles über eine übersichtliche macOS-Oberfläche.
 
-Seit Version 2.3.0 unterstützt AnyNasPy nicht mehr ausschließlich Synology, sondern eine Vielzahl verschiedener NAS-Plattformen.
+Seit Version 2.3.0 unterstützt AnyNasPy nicht mehr ausschließlich Synology, sondern eine Vielzahl verschiedener NAS-Plattformen. Durch die Eingabe eigener ShutDown Befehle können somit alle NAS Server verwaltet werden.
 
 ⸻
 

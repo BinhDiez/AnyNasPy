@@ -95,6 +95,21 @@ Bereich	Funktionen
 </tr>
 </table>
 
+<br>
+
+
+<table>
+<tr>
+<td align="center" valign="top">
+<b>Serverprofil</b><br>
+<img src="screenshots/screenshot_AnyNasPy9.png" width="400">
+</td>
+<td align="center" valign="top">
+<b>Startvorgang NAS</b><br>
+<img src="screenshots/screenshot_AnyNasPy10.png" width="400">
+</td>
+</tr>
+</table>
 
 
 

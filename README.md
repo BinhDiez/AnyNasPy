@@ -29,6 +29,7 @@ Bereich	Funktionen
 
 📸 Screenshots
 
+
 <table>
 <tr>
 <td align="center" valign="top">
@@ -45,18 +46,16 @@ Bereich	Funktionen
 ---
 
 <details>
-<summary><b>weitere Screenshots anzeigen</b></summary>
+<summary><b>📸 weitere Screenshots anzeigen</b></summary>
 
 <br>
 
-
-📸 Screenshots
 
 <table>
 <tr>
 <td align="center" valign="top">
 <b>Zeitgesteuertes Herunterfahren</b><br>
-<img src="screenshots/screenshot_AnyNasPy2.png" width="400">
+<img src="screenshots/screenshot_AnyNasPy13.png" width="400">
 </td>
 <td align="center" valign="top">
 <bCaffeinate Optionen</b><br>
@@ -64,6 +63,45 @@ Bereich	Funktionen
 </td>
 </tr>
 </table>
+
+<details>
+<summary><b>📸 weitere Screenshots anzeigen</b></summary>
+
+<br>
+
+
+<table>
+<tr>
+<td align="center" valign="top">
+<b>Zeitgesteuertes Herunterfahren</b><br>
+<img src="screenshots/screenshot_AnyNasPy13.png" width="400">
+</td>
+<td align="center" valign="top">
+<b>Caffeinate Optionen</b><br>
+<img src="screenshots/screenshot_AnyNasPy3.png" width="400">
+</td>
+</tr>
+</table>
+
+<br>
+
+
+<table>
+<tr>
+<td align="center" valign="top">
+<b>Allgemeine Einstellungen 1</b><br>
+<img src="screenshots/screenshot_AnyNasPy5.png" width="400">
+</td>
+<td align="center" valign="top">
+<b>Allgemeine Einstellungen 2</b><br>
+<img src="screenshots/screenshot_AnyNasPy6.png" width="400">
+</td>
+</tr>
+</table>
+
+
+
+
 
 </details>
 ---

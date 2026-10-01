@@ -48,8 +48,7 @@ Bereich	Funktionen
 <details>
 <summary><b>📸 weitere Screenshots anzeigen</b></summary>
 
-<br>
-
+⸻
 
 <table>
 <tr>
@@ -65,7 +64,7 @@ Bereich	Funktionen
 </table>
 
 
-<br>
+⸻
 
 
 <table>
@@ -81,6 +80,7 @@ Bereich	Funktionen
 </tr>
 </table>
 
+⸻
 
 <table>
 <tr>
@@ -95,7 +95,7 @@ Bereich	Funktionen
 </tr>
 </table>
 
-<br>
+⸻
 
 
 <table>
@@ -111,10 +111,25 @@ Bereich	Funktionen
 </tr>
 </table>
 
+⸻
 
+<table>
+<tr>
+<td align="center" valign="top">
+<b>Serverprofil</b><br>
+<img src="screenshots/screenshot_AnyNasPy9.png" width="400">
+</td>
+<td align="center" valign="top">
+<b>Startvorgang Mounte NAS</b><br>
+<img src="screenshots/screenshot_AnyNasPy11.png" width="400">
+</td>
+</tr>
+</table>
 
 </details>
+
 ---
+
 <details>
 <summary><strong>🌍 Unterstützte NAS-Systeme</strong></summary>
 

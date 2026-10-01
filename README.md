@@ -42,50 +42,27 @@ Bereich	Funktionen
 </tr>
 </table>
 
-
-<table>
-<tr>
-<td align="center">
-<b>Server Offline</b><br>
-<img src="screenshots/screenshot_AnyNasPy1.png" width="400">
-</td>
-<td align="center">
-<b>Server Online</b><br>
-<img src="screenshots/screenshot_AnyNasPy13.png" width="400">
-</td>
-</tr>
-</table>
-
 ---
 
 <details>
-<summary><b>Screenshots anzeigen</b></summary>
+<summary><b>weitere Screenshots anzeigen</b></summary>
 
 <br>
 
+
+📸 Screenshots
+
 <table>
 <tr>
-<td align="center">
-<b>Beschreibung von Screenshot 3</b><br>
+<td align="center" valign="top">
+<b>Zeitgesteuertes Herunterfahren</b><br>
+<img src="screenshots/screenshot_AnyNasPy2.png" width="400">
+</td>
+<td align="center" valign="top">
+<bCaffeinate Optionen</b><br>
 <img src="screenshots/screenshot_AnyNasPy3.png" width="400">
 </td>
-<td align="center">
-<b>Beschreibung von Screenshot 4</b><br>
-<img src="screenshots/screenshot_AnyNasPy4.png" width="400">
-</td>
 </tr>
-
-<tr>
-<td align="center">
-<b>Beschreibung von Screenshot 5</b><br>
-<img src="screenshots/screenshot_AnyNasPy5.png" width="400">
-</td>
-<td align="center">
-<b>Beschreibung von Screenshot 6</b><br>
-<img src="screenshots/screenshot_AnyNasPy6.png" width="400">
-</td>
-</tr>
-
 </table>
 
 </details>

@@ -381,7 +381,7 @@ Die tatsächlich benötigten Voraussetzungen hängen vom verwendeten NAS-Herstel
 1. Die aktuelle Version aus den GitHub Releases herunterladen.
 2. Das Archiv entpacken.
 3. AnyNasPy.app in den Ordner Programme verschieben.
-4. Anwendung starten.
+4. Anwendung starten. (Gatekeeper Info befolgen)
 5. Ein NAS-Profil konfigurieren.
 6. SSH-Zugriff und gewünschte Optionen einrichten.
 
@@ -416,32 +416,6 @@ xattr -d com.apple.quarantine '/Users/username/Downloads/AnyNasPy.app'
 
 Den Pfad gegebenenfalls an den tatsächlichen Speicherort der Anwendung anpassen.
 
-</details>
-
-⸻
-
-<details>
-<summary><strong>🖥️ Download-Informationen</strong></summary>
-
-Versionen
-
-Dateiendung	Plattform
-_macOS_as	Apple Silicon (M1–M4)
-_macOS_intel	Intel Mac
-
-7z-Archive
-
-Betriebssystem	Empfohlene Anwendung
-🍎 macOS	Keka
-🪟 Windows	7-Zip
-
-</details>
-
-⸻
-
-<details>
-<summary><strong>🔑 Passwort für 7z-Archive</strong></summary>
-BinhDiez
 </details>
 
 ⸻
@@ -821,33 +795,6 @@ Von Synology bis QNAP, TrueNAS, Unraid und weiteren Systemen – mit automatisch
 ---
 
 <details>
-<summary>🔒 macOS Gatekeeper Info</summary>
-
-
-AnyNasPy and SyNasPy is currently not signed with an Apple Developer certificate.
-
-When starting the app for the first time, macOS Gatekeeper may block the app from running.
-
-1. Open the app once.
-2. Close the warning.
-3. **System Settings → Privacy & Security**
-4. Scroll all the way down to the warning "SyNasPy was blocked..." 
-5. Select **“Open Anyway”**
-6. If you are warned again: select **“Open Anyway”** again and confirm with your password.
-
-### Alternatively, remove the quarantine attribute:
-
-🍎 macOS Terminal
-
-xattr -d com.apple.quarantine '/Users/username/Downloads/SyNasPy.app'
-
-> Please adjust the file path accordingly.
-
-</details>
-
----
-
-<details>
 <summary>🖥️ Download-Info</summary>
 
 ### Download-Versiones
@@ -874,17 +821,3 @@ xattr -d com.apple.quarantine '/Users/username/Downloads/SyNasPy.app'
 **BinhDiez**
 
 </details>
-
-
-
-
-
----
-
-## 📸 Screenshots
-
-| Main Window | Settings |
-|-------------|----------|
-| <img width="420" alt="Server Offline" src="https://github.com/user-attachments/assets/2598c7c9-7256-4ea4-94f7-800d95f60989"> | <img width="420" alt="Settings" src="https://github.com/user-attachments/assets/514809e4-b9a4-48c7-bb67-4d7039fc147c"> |
-
----

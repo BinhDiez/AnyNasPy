@@ -37,7 +37,7 @@ Bereich	Funktionen
 </td>
 <td align="center">
 <b>Server Online</b><br>
-<img src="screenshots/screenshot_AnyNasPy2.png" width="400">
+<img src="screenshots/screenshot_AnyNasPy13.png" width="400">
 </td>
 </tr>
 </table>

@@ -580,6 +580,7 @@ Die Konfigurationsdateien befinden sich unter:
 Typische Dateien
 
 AnyNasPy/
+
 ├── synaspy_config.json
 
 ├── server_profiles.json
@@ -610,12 +611,19 @@ Die Anwendung basiert auf Python und PyQt.
 Beispielhafte Projektstruktur
 
 AnyNasPy/
+
 ├── AnyNasPy.py             # Hauptanwendung
+
 ├── requirements.txt        # Python-Abhängigkeiten
+
 ├── README.md               # Projektdokumentation
+
 ├── LICENSE                 # MIT-Lizenz
+
 ├── BinhDiez.png            # Anwendungslogo
+
 ├── AnyNasPy.png            # Anwendungssymbol
+
 └── .gitignore              # Git-Ausschlüsse
 
 Zentrale Komponenten

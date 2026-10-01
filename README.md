@@ -31,9 +31,14 @@ Bereich	Funktionen
 
 | Main Window | Einstellungen |
 |-------------|----------|
-| <img width="420" alt="Server Offline" src="https://github.com/user-attachments/assets/2598c7c9-7256-4ea4-94f7-800d95f60989"> | <img width="420" alt="Settings" src="https://github.com/user-attachments/assets/514809e4-b9a4-48c7-bb67-4d7039fc147c"> |
+| ![Screenshot 1](screenshots/screenshot_AnyNasPy1.png) | ![Screenshot 1](screenshots/screenshot_AnyNasPy2.png)|
 
-⸻
+
+![Screenshot 1](screenshots/screenshot_AnyNasPy1.png)
+
+![Screenshot 1](screenshots/screenshot_AnyNasPy2.png)
+
+![Screenshot 3](screenshots/screenshot3.png)⸻
 
 <details>
 <summary><strong>🌍 Unterstützte NAS-Systeme</strong></summary>

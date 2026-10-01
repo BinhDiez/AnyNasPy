@@ -577,17 +577,20 @@ Die Konfigurationsdateien befinden sich unter:
 
 ~/Library/Application Support/AnyNasPy/
 
-Typische Dateien:
+Typische Dateien
 
 AnyNasPy/
 ├── synaspy_config.json
 ├── server_profiles.json
 └── Logs/
-    ├── ...
+    ├── AnyNasPy.log
+    ├── AnyNasPy.log.1
+    ├── AnyNasPy.log.2
+    └── ...
 
 Die Logdateien werden automatisch rotiert.
 
-Die Anwendung verwendet sowohl zeit- als auch größenbasierte Mechanismen zur Begrenzung der Logdateien.
+Die Anwendung verwendet sowohl zeit- als auch größenbasierte Mechanismen, um die Anzahl und Größe der Logdateien zu begrenzen.
 
 </details>
 
@@ -598,22 +601,22 @@ Die Anwendung verwendet sowohl zeit- als auch größenbasierte Mechanismen zur B
 
 Die Anwendung basiert auf Python und PyQt.
 
-Beispielhafte Projektstruktur:
+Beispielhafte Projektstruktur
 
 AnyNasPy/
-├── AnyNasPy.py
-├── requirements.txt
-├── README.md
-├── LICENSE
-├── BinhDiez.png
-├── AnyNasPy.png
-└── .gitignore
+├── AnyNasPy.py             # Hauptanwendung
+├── requirements.txt        # Python-Abhängigkeiten
+├── README.md               # Projektdokumentation
+├── LICENSE                 # MIT-Lizenz
+├── BinhDiez.png            # Anwendungslogo
+├── AnyNasPy.png            # Anwendungssymbol
+└── .gitignore              # Git-Ausschlüsse
 
 Zentrale Komponenten
 
-* LanguageManager – Mehrsprachigkeit
-* ServerProfile – Daten eines NAS-Profils
-* ServerProfileManager – Verwaltung und Speicherung der Profile
+* LanguageManager – Verwaltung der 17 unterstützten Sprachen
+* ServerProfile – Daten eines NAS-Serverprofils
+* ServerProfileManager – Verwaltung und Speicherung der Serverprofile
 * Config – Zentrale Konfiguration
 * AnyNasPy – Hauptfenster und Kernlogik
 * ConfigDialog – Einstellungsdialog
@@ -622,7 +625,7 @@ Zentrale Komponenten
 
 </details>
 
-⸻
+---
 
 🔄 Versionsverlauf
 

@@ -581,11 +581,17 @@ Typische Dateien
 
 AnyNasPy/
 ├── synaspy_config.json
+
 ├── server_profiles.json
+
 └── Logs/
+
     ├── AnyNasPy.log
+    
     ├── AnyNasPy.log.1
+    
     ├── AnyNasPy.log.2
+    
     └── ...
 
 Die Logdateien werden automatisch rotiert.

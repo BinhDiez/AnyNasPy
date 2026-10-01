@@ -31,6 +31,20 @@ Bereich	Funktionen
 
 <table>
 <tr>
+<td align="center" valign="top">
+<b>Server Offline</b><br>
+<img src="screenshots/screenshot_AnyNasPy1.png" width="400">
+</td>
+<td align="center" valign="top">
+<b>Server Online</b><br>
+<img src="screenshots/screenshot_AnyNasPy13.png" width="400">
+</td>
+</tr>
+</table>
+
+
+<table>
+<tr>
 <td align="center">
 <b>Server Offline</b><br>
 <img src="screenshots/screenshot_AnyNasPy1.png" width="400">

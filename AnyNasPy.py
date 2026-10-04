@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AnyNasPy - NAS Management Tool
+"""AnyNasPy - Universal NAS Management Tool
     GUI-Anwendung zur Verwaltung eines Synology NAS-Servers
     Funktionen: Wake-on-LAN, Zeitgesteuertes Herunterfahren, Volume-Management, Caffeinate für den Mac
 
@@ -236,22 +236,22 @@ Version 2.1.0
     You should have received a copy of the GNU General Public License along with
     PyQt5. If not, see <http://www.gnu.org/licenses/>.
 """
-
+import atexit
 import getpass
 import json
 import os
 import platform
 import re
 import signal
+import shutil
 import socket
-import urllib.request
 import subprocess
 import sys
 import textwrap
 import threading
 import time
 import traceback
-import atexit
+import urllib.request
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -285,6 +285,7 @@ from PyQt5.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QRadioButton,
     QScrollArea,
     QSizePolicy,
     QSpinBox,
@@ -314,7 +315,7 @@ class MacKeychainHelper:
 
     # Eindeutiger Service-Name im Keychain
     SERVICE_NAME = "AnyNasPy-AdminPassword"
-    ACCOUNT_NAME = "synaspy-admin"
+    ACCOUNT_NAME = "anynaspy-admin"
 
     @classmethod
     def store_password(cls, password: str) -> bool:
@@ -429,7 +430,7 @@ class LanguageManager:
         # "🇸🇦 Arabisch"
         "ar": {
             "language": "اللغة:",
-            "window_title": "إدارة NAS",
+            "window_title": "إدارة NAS - AnyNasPy",
             "status_checking": "جاري التحقق من اتصال الخادم...",
             "status_online": "خادم NAS متصل ✓",
             "status_offline": "خادم NAS غير متصل",
@@ -570,7 +571,7 @@ class LanguageManager:
             "ssh_key_create_question": "هل تريد إنشاء زوج مفاتيح SSH جديد؟",
             "ssh_key_create_existing": "مفتاح SSH '{}' موجود بالفعل.\nهل تريد استبداله؟",
             "ssh_key_create_comment": "تعليق لمفتاح SSH (اختياري):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "تم إنشاء مفتاح SSH: {}",
             "ssh_key_create_error": "خطأ أثناء إنشاء مفتاح SSH",
             "ssh_key_create_timeout": "انتهت مهلة إنشاء المفتاح",
@@ -636,7 +637,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "جاري تجربة wakeonlan...",
             "status_trying_etherwake": "جاري تجربة etherwake...",
             "ssh_key_system_key_warning": "تحذير أمني",
-            "ssh_key_system_key_message": "الاسم '{}' هو مفتاح نظام ولن يتم استبداله.\nالرجاء اختيار اسم آخر (مثال: synaspy_rsa).",
+            "ssh_key_system_key_message": "الاسم '{}' هو مفتاح نظام ولن يتم استبداله.\nالرجاء اختيار اسم آخر (مثال: anynaspy_rsa).",
             "profile_name_exists": "يوجد بالفعل ملف شخصي بالاسم '{}'.",
             "config_profile_created": "تم إنشاء الملف الشخصي '{}'.",
             "config_profile_create_failed": "فشل إنشاء الملف الشخصي.",
@@ -947,6 +948,22 @@ class LanguageManager:
                 "الكشف التلقائي عن عنوان MAC. "
                 "في حال الفشل، سيتم عرض دليل إرشادي."
             ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "هدف الإيقاف التلقائي:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "NAS فقط",
+            "config_auto_shutdown_target_mac": "ماك فقط",
+            "config_auto_shutdown_target_none": "إيقاف",
+            "config_auto_shutdown_target_hint": "💡 يحدد ما يحدث عند انتهاء المؤقت التلقائي. أزرار الإيقاف التي تم النقر عليها يدويًا لا تتأثر بذلك.",
+            "status_auto_timer_disabled": "⏸ تم تعطيل المؤقت التلقائي",
+            "timer_shutdown_both": "إيقاف تلقائي (Mac + NAS) خلال {} ثانية",
+            "timer_shutdown_nas": "إيقاف تلقائي (NAS فقط) خلال {} ثانية",
+            "timer_shutdown_mac": "إيقاف تلقائي (ماك فقط) خلال {} ثانية",
+            "say_timer_shutdown_both": "إيقاف تلقائي لـ Mac و NAS خلال {} ثانية - Enter لـ NAS فقط - Escape للإلغاء",
+            "say_timer_shutdown_nas": "إيقاف تلقائي لـ NAS خلال {} ثانية - Enter للإيقاف الفوري - Escape للإلغاء",
+            "say_timer_shutdown_mac": "إيقاف تلقائي للماك خلال {} ثانية - Enter للإيقاف الفوري - Escape للإلغاء",
         },
         # "🇨🇿 Tschechisch"
         "cs": {
@@ -1092,7 +1109,7 @@ class LanguageManager:
             "ssh_key_create_question": "Chcete vytvořit nový pár SSH klíčů?",
             "ssh_key_create_existing": "SSH klíč '{}' již existuje.\nChcete jej přepsat?",
             "ssh_key_create_comment": "Komentář k SSH klíči (volitelný):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "SSH klíč vytvořen: {}",
             "ssh_key_create_error": "Chyba při vytváření SSH klíče",
             "ssh_key_create_timeout": "Časový limit při vytváření klíče",
@@ -1158,7 +1175,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Zkouším wakeonlan...",
             "status_trying_etherwake": "Zkouším etherwake...",
             "ssh_key_system_key_warning": "Bezpečnostní varování",
-            "ssh_key_system_key_message": "Název '{}' je systémový klíč a nebude přepsán.\nZvolte jiný název (např. synaspy_rsa).",
+            "ssh_key_system_key_message": "Název '{}' je systémový klíč a nebude přepsán.\nZvolte jiný název (např. anynaspy_rsa).",
             "profile_name_exists": "Profil s názvem '{}' již existuje.",
             "config_profile_created": "Profil '{}' byl vytvořen.",
             "config_profile_create_failed": "Profil se nepodařilo vytvořit.",
@@ -1468,12 +1485,48 @@ class LanguageManager:
                 "Automaticky rozpoznat MAC adresu. "
                 "Pokud to selže, zobrazí se návod."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Připojuji {} z {}: {}",
+            "status_mounted_progress": "✅ Připojeno {} z {}: {}",
+            "status_mount_failed_volume": "⚠ Připojení se nezdařilo: {}",
+            "status_waiting_smb": "⏳ Čekám {} sekund na službu SMB...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Zjišťuji svazky...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Poznámka: Všechny svazky lze libovolně aktivovat nebo deaktivovat.",
+            "warning_no_volumes_selected": (
+                "Nemáte aktivovány žádné svazky.\n\n"
+                "Pokud takto uložíte, při spuštění NAS se žádné svazky automaticky nepřipojí.\n\n"
+                "Přesto uložit?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Cíl automatického vypnutí:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Pouze NAS",
+            "config_auto_shutdown_target_mac": "Pouze Mac",
+            "config_auto_shutdown_target_none": "Vypnuto",
+            "config_auto_shutdown_target_hint": "💡 Určuje, co se stane po vypršení automatického časovače. Ručně kliknutá tlačítka vypnutí tím nejsou ovlivněna.",
+            "status_auto_timer_disabled": "⏸ Automatický časovač deaktivován",
+            "timer_shutdown_both": "Automatické vypnutí (Mac + NAS) za {} sekund",
+            "timer_shutdown_nas": "Automatické vypnutí (pouze NAS) za {} sekund",
+            "timer_shutdown_mac": "Automatické vypnutí (pouze Mac) za {} sekund",
+            "say_timer_shutdown_both": "Automatické vypnutí Macu a NAS za {} sekund - Enter pro pouze NAS - Escape pro zrušení",
+            "say_timer_shutdown_nas": "Automatické vypnutí NAS za {} sekund - Enter pro okamžité vypnutí - Escape pro zrušení",
+            "say_timer_shutdown_mac": "Automatické vypnutí Macu za {} sekund - Enter pro okamžité vypnutí - Escape pro zrušení",
         },
         # "🇩🇪 Deutsch"
         "de": {
             "language": "Sprache:",
             # Hauptfenster
-            "window_title": "NAS Management",
+            "window_title": "AnyNasPy - NAS Management",
             "status_checking": "Prüfe Serververbindung...",
             "status_online": "NAS Server ist online ✓",
             "status_offline": "NAS Server ist offline",
@@ -1623,7 +1676,7 @@ class LanguageManager:
             "ssh_key_create_question": "Möchten Sie ein neues SSH-Key-Paar erstellen?",
             "ssh_key_create_existing": "Der SSH-Key '{}' existiert bereits.\nMöchten Sie ihn überschreiben?",
             "ssh_key_create_comment": "Kommentar für den SSH-Key (optional):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "SSH-Key erstellt: {}",
             "ssh_key_create_error": "Fehler beim Erstellen des SSH-Keys",
             "ssh_key_create_timeout": "Zeitüberschreitung bei Key-Erstellung",
@@ -1692,7 +1745,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Versuche wakeonlan...",
             "status_trying_etherwake": "Versuche etherwake...",
             "ssh_key_system_key_warning": "Sicherheitswarnung",
-            "ssh_key_system_key_message": "Der Name '{}' ist ein System-Key und wird nicht überschrieben!\nBitte wählen Sie einen anderen Namen (z.B. synaspy_rsa).",
+            "ssh_key_system_key_message": "Der Name '{}' ist ein System-Key und wird nicht überschrieben!\nBitte wählen Sie einen anderen Namen (z.B. anynaspy_rsa).",
             "profile_name_exists": "Ein Profil mit dem Namen '{}' existiert bereits.",
             "profile_cannot_delete_last": "Das letzte Profil kann nicht gelöscht werden.",
             "config_profile_created": "Profil '{}' wurde erstellt.",
@@ -2116,11 +2169,61 @@ class LanguageManager:
             "config_mac_find_tooltip": (
                 "MAC-Adresse automatisch erkennen. "
                 "Falls das scheitert, wird eine Anleitung angezeigt."
-            ),        },
+            ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Mounte {} von {}: {}",
+            "status_mounted_progress": "✅ Gemountet {} von {}: {}",
+            "status_mount_failed_volume": "⚠ Mounten fehlgeschlagen: {}",
+            "status_waiting_smb": "⏳ Warte {} Sekunden auf SMB-Dienst...",
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Auto-Shutdown-Ziel:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Nur NAS",
+            "config_auto_shutdown_target_hint": (
+                "💡 Bestimmt, was beim Ablauf des Auto-Timers passiert. "
+                "Manuell geklickte Shutdown-Buttons sind davon nicht "
+                "betroffen."
+            ),
+            "timer_shutdown_both": "Auto-Shutdown (Mac + NAS) in {} Sekunden",
+            "timer_shutdown_nas": "Auto-Shutdown (Nur NAS) in {} Sekunden",
+            "say_timer_shutdown_both": (
+                "Mac und NAS Auto Shutdown in {} Sekunden - "
+                "Enter für nur NAS - Escape zum Abbrechen"
+            ),
+            "say_timer_shutdown_nas": (
+                "NAS Auto Shutdown in {} Sekunden - "
+                "Enter für sofortigen Shutdown - Escape zum Abbrechen"
+            ),
+            "config_auto_shutdown_target_mac": "Nur Mac",
+            "config_auto_shutdown_target_none": "Aus",
+            "status_auto_timer_disabled": "⏸ Auto-Timer deaktiviert",
+            "timer_shutdown_mac": "Auto-Shutdown (Nur Mac) in {} Sekunden",
+            "say_timer_shutdown_mac": (
+                "Mac Auto Shutdown in {} Sekunden - "
+                "Enter für sofortigen Shutdown - Escape zum Abbrechen"
+            ),
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": (
+                "Hinweis: Alle Volumes können frei aktiviert oder "
+                "deaktiviert werden."
+            ),
+            "warning_no_volumes_selected": (
+                "Du hast keine Volumes aktiviert.\n\n"
+                "Wenn du so speicherst, werden beim NAS-Start keine Volumes "
+                "automatisch gemountet.\n\n"
+                "Trotzdem speichern?"
+            ),
+        },
         # "🇬🇷 Ελληνικά" (Griechisch)
         "el": {
             "language": "Γλώσσα:",
-            "window_title": "Διαχείριση NAS",
+            "window_title": "AnyNasPy - Διαχείριση NAS",
             "status_checking": "Έλεγχος σύνδεσης διακομιστή...",
             "status_online": "Ο διακομιστής NAS είναι σε λειτουργία ✓",
             "status_offline": "Ο διακομιστής NAS είναι εκτός λειτουργίας",
@@ -2261,7 +2364,7 @@ class LanguageManager:
             "ssh_key_create_question": "Θέλετε να δημιουργήσετε ένα νέο ζεύγος κλειδιών SSH;",
             "ssh_key_create_existing": "Το κλειδί SSH '{}' υπάρχει ήδη.\nΘέλετε να το αντικαταστήσετε;",
             "ssh_key_create_comment": "Σχόλιο για το κλειδί SSH (προαιρετικό):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "Το κλειδί SSH δημιουργήθηκε: {}",
             "ssh_key_create_error": "Σφάλμα κατά τη δημιουργία του κλειδιού SSH",
             "ssh_key_create_timeout": "Λήξη χρόνου κατά τη δημιουργία κλειδιού",
@@ -2327,7 +2430,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Δοκιμή wakeonlan...",
             "status_trying_etherwake": "Δοκιμή etherwake...",
             "ssh_key_system_key_warning": "Προειδοποίηση ασφαλείας",
-            "ssh_key_system_key_message": "Το όνομα '{}' είναι κλειδί συστήματος και δεν θα αντικατασταθεί.\nΠαρακαλώ επιλέξτε άλλο όνομα (π.χ. synaspy_rsa).",
+            "ssh_key_system_key_message": "Το όνομα '{}' είναι κλειδί συστήματος και δεν θα αντικατασταθεί.\nΠαρακαλώ επιλέξτε άλλο όνομα (π.χ. anynaspy_rsa).",
             "profile_name_exists": "Υπάρχει ήδη προφίλ με το όνομα '{}'.",
             "config_profile_created": "Το προφίλ '{}' δημιουργήθηκε.",
             "config_profile_create_failed": "Αποτυχία δημιουργίας προφίλ.",
@@ -2756,12 +2859,48 @@ class LanguageManager:
                 "Αυτόματη αναγνώριση της διεύθυνσης MAC. "
                 "Εάν αποτύχει, θα εμφανιστεί οδηγός."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Γίνεται προσάρτηση {} από {}: {}",
+            "status_mounted_progress": "✅ Προσαρτήθηκε {} από {}: {}",
+            "status_mount_failed_volume": "⚠ Η προσάρτηση απέτυχε: {}",
+            "status_waiting_smb": "⏳ Αναμονή {} δευτερολέπτων για την υπηρεσία SMB...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Ανίχνευση τόμων...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Σημείωση: Όλοι οι τόμοι μπορούν να ενεργοποιηθούν ή να απενεργοποιηθούν ελεύθερα.",
+            "warning_no_volumes_selected": (
+                "Δεν έχετε ενεργοποιήσει κανέναν τόμο.\n\n"
+                "Αν αποθηκεύσετε έτσι, κατά την εκκίνηση του NAS δεν θα προσαρτηθεί αυτόματα κανένας τόμος.\n\n"
+                "Αποθήκευση ούτως ή άλλως;"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Στόχος αυτόματου τερματισμού:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Μόνο NAS",
+            "config_auto_shutdown_target_mac": "Μόνο Mac",
+            "config_auto_shutdown_target_none": "Ανενεργό",
+            "config_auto_shutdown_target_hint": "💡 Καθορίζει τι συμβαίνει όταν λήξει το αυτόματο χρονόμετρο. Τα κουμπιά τερματισμού που πατήθηκαν χειροκίνητα δεν επηρεάζονται.",
+            "status_auto_timer_disabled": "⏸ Ο αυτόματος χρονοδιακόπτης απενεργοποιήθηκε",
+            "timer_shutdown_both": "Αυτόματος τερματισμός (Mac + NAS) σε {} δευτερόλεπτα",
+            "timer_shutdown_nas": "Αυτόματος τερματισμός (Μόνο NAS) σε {} δευτερόλεπτα",
+            "timer_shutdown_mac": "Αυτόματος τερματισμός (Μόνο Mac) σε {} δευτερόλεπτα",
+            "say_timer_shutdown_both": "Αυτόματος τερματισμός Mac και NAS σε {} δευτερόλεπτα - Enter για μόνο NAS - Escape για ακύρωση",
+            "say_timer_shutdown_nas": "Αυτόματος τερματισμός NAS σε {} δευτερόλεπτα - Enter για άμεσο τερματισμό - Escape για ακύρωση",
+            "say_timer_shutdown_mac": "Αυτόματος τερματισμός Mac σε {} δευτερόλεπτα - Enter για άμεσο τερματισμό - Escape για ακύρωση",
         },
         # "🇬🇧 English"
         "en": {
             "language": "Idioma:",
             # Main window
-            "window_title": "NAS Management",
+            "window_title": "AnyNasPy - NAS Management",
             "status_checking": "Checking server connection...",
             "status_online": "NAS Server is online ✓",
             "status_offline": "NAS Server is offline",
@@ -2913,7 +3052,7 @@ class LanguageManager:
             "ssh_key_create_question": "Do you want to create a new SSH key pair?",
             "ssh_key_create_existing": "SSH key '{}' already exists.\nDo you want to overwrite it?",
             "ssh_key_create_comment": "Comment for the SSH key (optional):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "SSH key created: {}",
             "ssh_key_create_error": "Error creating SSH key",
             "ssh_key_create_timeout": "SSH key creation timed out",
@@ -2980,7 +3119,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Trying wakeonlan...",
             "status_trying_etherwake": "Trying etherwake...",
             "ssh_key_system_key_warning": "Security warning",
-            "ssh_key_system_key_message": "The name '{}' is a system key and will not be overwritten!\nPlease choose a different name (e.g. synaspy_rsa).",
+            "ssh_key_system_key_message": "The name '{}' is a system key and will not be overwritten!\nPlease choose a different name (e.g. anynaspy_rsa).",
             "profile_name_exists": "A profile with the name '{}' already exists.",
             "profile_cannot_delete_last": "The last profile cannot be deleted.",
             "config_profile_created": "Profile '{}' has been created.",
@@ -3404,10 +3543,46 @@ class LanguageManager:
                 "Auto-detect MAC address. "
                 "If that fails, a guide will be shown."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Mounting {} of {}: {}",
+            "status_mounted_progress": "✅ Mounted {} of {}: {}",
+            "status_mount_failed_volume": "⚠ Mount failed: {}",
+            "status_waiting_smb": "⏳ Waiting {} seconds for SMB service...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Detecting volumes...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Note: All volumes can be freely enabled or disabled.",
+            "warning_no_volumes_selected": (
+                "You have not enabled any volumes.\n\n"
+                "If you save like this, no volumes will be mounted automatically when the NAS starts.\n\n"
+                "Save anyway?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Auto-shutdown target:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "NAS only",
+            "config_auto_shutdown_target_mac": "Mac only",
+            "config_auto_shutdown_target_none": "Off",
+            "config_auto_shutdown_target_hint": "💡 Determines what happens when the auto-timer expires. Manually clicked shutdown buttons are not affected.",
+            "status_auto_timer_disabled": "⏸ Auto-timer disabled",
+            "timer_shutdown_both": "Auto-shutdown (Mac + NAS) in {} seconds",
+            "timer_shutdown_nas": "Auto-shutdown (NAS only) in {} seconds",
+            "timer_shutdown_mac": "Auto-shutdown (Mac only) in {} seconds",
+            "say_timer_shutdown_both": "Mac and NAS auto shutdown in {} seconds - Enter for NAS only - Escape to cancel",
+            "say_timer_shutdown_nas": "NAS auto shutdown in {} seconds - Enter for immediate shutdown - Escape to cancel",
+            "say_timer_shutdown_mac": "Mac auto shutdown in {} seconds - Enter for immediate shutdown - Escape to cancel",
         },
         # "🇪🇸 Español"
         "es": {
-            "window_title": "Gestión NAS",
+            "window_title": "AnyNasPy - Gestión NAS",
             "status_checking": "Comprobando conexión al servidor...",
             "status_online": "Servidor NAS en línea ✓",
             "status_offline": "Servidor NAS fuera de línea",
@@ -3548,7 +3723,7 @@ class LanguageManager:
             "ssh_key_create_question": "¿Quieres crear un nuevo par de claves SSH?",
             "ssh_key_create_existing": "La clave SSH '{}' ya existe.\n¿Quieres sobrescribirla?",
             "ssh_key_create_comment": "Comentario para la clave SSH (opcional):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "Clave SSH creada: {}",
             "ssh_key_create_error": "Error al crear la clave SSH",
             "ssh_key_create_timeout": "Tiempo de creación de clave SSH agotado",
@@ -3614,7 +3789,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Intentando wakeonlan...",
             "status_trying_etherwake": "Intentando etherwake...",
             "ssh_key_system_key_warning": "Advertencia de seguridad",
-            "ssh_key_system_key_message": "El nombre '{}' es una clave del sistema y no se sobrescribirá.\nPor favor, elija otro nombre (p.ej. synaspy_rsa).",
+            "ssh_key_system_key_message": "El nombre '{}' es una clave del sistema y no se sobrescribirá.\nPor favor, elija otro nombre (p.ej. anynaspy_rsa).",
             "profile_name_exists": "Ya existe un perfil con el nombre '{}'.",
             "config_profile_created": "Se ha creado el perfil '{}'.",
             "config_profile_create_failed": "No se pudo crear el perfil.",
@@ -4039,12 +4214,48 @@ class LanguageManager:
                 "Detectar la dirección MAC automáticamente. "
                 "Si falla, se mostrará una guía."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Montando {} de {}: {}",
+            "status_mounted_progress": "✅ Montado {} de {}: {}",
+            "status_mount_failed_volume": "⚠ Error al montar: {}",
+            "status_waiting_smb": "⏳ Esperando {} segundos al servicio SMB...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Detectando volúmenes...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Nota: Todos los volúmenes se pueden activar o desactivar libremente.",
+            "warning_no_volumes_selected": (
+                "No has activado ningún volumen.\n\n"
+                "Si guardas así, no se montará ningún volumen automáticamente al iniciar el NAS.\n\n"
+                "¿Guardar de todos modos?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Destino del apagado automático:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Solo NAS",
+            "config_auto_shutdown_target_mac": "Solo Mac",
+            "config_auto_shutdown_target_none": "Apagado",
+            "config_auto_shutdown_target_hint": "💡 Determina qué ocurre cuando finaliza el temporizador automático. Los botones de apagado pulsados manualmente no se ven afectados.",
+            "status_auto_timer_disabled": "⏸ Temporizador automático desactivado",
+            "timer_shutdown_both": "Apagado automático (Mac + NAS) en {} segundos",
+            "timer_shutdown_nas": "Apagado automático (solo NAS) en {} segundos",
+            "timer_shutdown_mac": "Apagado automático (solo Mac) en {} segundos",
+            "say_timer_shutdown_both": "Apagado automático de Mac y NAS en {} segundos - Enter para solo NAS - Escape {} para cancelar",
+            "say_timer_shutdown_nas": "Apagado automático de NAS en {} segundos - Enter para apagado inmediato - Escape para cancelar",
+            "say_timer_shutdown_mac": "Apagado automático del Mac en {} segundos - Enter para apagado inmediato - Escape para cancelar",
         },
         # "🇫🇷 Français"
         "fr": {
             "language": "Langue:",
             # Hauptfenster
-            "window_title": "Gestion NAS",
+            "window_title": "AnyNasPy - Gestion NAS",
             "status_checking": "Vérification de la connexion au serveur...",
             "status_online": "Serveur NAS en ligne ✓",
             "status_offline": "Serveur NAS hors ligne",
@@ -4194,7 +4405,7 @@ class LanguageManager:
             "ssh_key_create_question": "Voulez-vous créer une nouvelle paire de clés SSH ?",
             "ssh_key_create_existing": "La clé SSH '{}' existe déjà.\nVoulez-vous la remplacer ?",
             "ssh_key_create_comment": "Commentaire pour la clé SSH (optionnel) :",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "Clé SSH créée : {}",
             "ssh_key_create_error": "Erreur lors de la création de la clé SSH",
             "ssh_key_create_timeout": "Délai de création de la clé SSH dépassé",
@@ -4260,7 +4471,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Tentative avec wakeonlan...",
             "status_trying_etherwake": "Tentative avec etherwake...",
             "ssh_key_system_key_warning": "Avertissement de sécurité",
-            "ssh_key_system_key_message": "Le nom '{}' est une clé système et ne sera pas écrasé.\nVeuillez choisir un autre nom (ex. synaspy_rsa).",
+            "ssh_key_system_key_message": "Le nom '{}' est une clé système et ne sera pas écrasé.\nVeuillez choisir un autre nom (ex. anynaspy_rsa).",
             "profile_name_exists": "Un profil avec le nom '{}' existe déjà.",
             "config_profile_created": "Le profil '{}' a été créé.",
             "config_profile_create_failed": "Échec de la création du profil.",
@@ -4687,11 +4898,47 @@ class LanguageManager:
                 "Détecter automatiquement l'adresse MAC. "
                 "En cas d'échec, un guide s'affichera."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Montage de {} sur {} : {}",
+            "status_mounted_progress": "✅ Monté {} sur {} : {}",
+            "status_mount_failed_volume": "⚠ Échec du montage : {}",
+            "status_waiting_smb": "⏳ Attente de {} secondes pour le service SMB...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Détection des volumes...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Remarque : Tous les volumes peuvent être activés ou désactivés librement.",
+            "warning_no_volumes_selected": (
+                "Vous n'avez activé aucun volume.\n\n"
+                "Si vous enregistrez ainsi, aucun volume ne sera monté automatiquement au démarrage du NAS.\n\n"
+                "Enregistrer quand même ?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Cible d'arrêt automatique :",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "NAS uniquement",
+            "config_auto_shutdown_target_mac": "Mac uniquement",
+            "config_auto_shutdown_target_none": "Désactivé",
+            "config_auto_shutdown_target_hint": "💡 Détermine ce qui se passe à l'expiration du minuteur automatique. Les boutons d'arrêt cliqués manuellement ne sont pas concernés.",
+            "status_auto_timer_disabled": "⏸ Minuteur automatique désactivé",
+            "timer_shutdown_both": "Arrêt automatique (Mac + NAS) dans {} secondes",
+            "timer_shutdown_nas": "Arrêt automatique (NAS uniquement) dans {} secondes",
+            "timer_shutdown_mac": "Arrêt automatique (Mac uniquement) dans {} secondes",
+            "say_timer_shutdown_both": "Arrêt automatique du Mac et du NAS dans {} secondes - Entrée pour NAS uniquement - Échap pour annuler",
+            "say_timer_shutdown_nas": "Arrêt automatique du NAS dans {} secondes - Entrée pour arrêt immédiat - Échap pour annuler",
+            "say_timer_shutdown_mac": "Arrêt automatique du Mac dans {} secondes - Entrée pour arrêt immédiat - Échap pour annuler",
         },
         # "🇮🇹 Italiano"
         "it": {
             "language": "Lingua:",
-            "window_title": "Gestione NAS",
+            "window_title": "AnyNasPy - Gestione NAS",
             "status_checking": "Controllo connessione al server...",
             "status_online": "Server NAS online ✓",
             "status_offline": "Server NAS offline",
@@ -4832,7 +5079,7 @@ class LanguageManager:
             "ssh_key_create_question": "Vuoi creare una nuova coppia di chiavi SSH?",
             "ssh_key_create_existing": "La chiave SSH '{}' esiste già.\nVuoi sovrascriverla?",
             "ssh_key_create_comment": "Commento per la chiave SSH (opzionale):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "Chiave SSH creata: {}",
             "ssh_key_create_error": "Errore durante la creazione della chiave SSH",
             "ssh_key_create_timeout": "Tempo di creazione della chiave SSH scaduto",
@@ -4898,7 +5145,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Tentativo con wakeonlan...",
             "status_trying_etherwake": "Tentativo con etherwake...",
             "ssh_key_system_key_warning": "Avviso di sicurezza",
-            "ssh_key_system_key_message": "Il nome '{}' è una chiave di sistema e non verrà sovrascritto.\nScegli un altro nome (es. synaspy_rsa).",
+            "ssh_key_system_key_message": "Il nome '{}' è una chiave di sistema e non verrà sovrascritto.\nScegli un altro nome (es. anynaspy_rsa).",
             "profile_name_exists": "Esiste già un profilo con il nome '{}'.",
             "config_profile_created": "Profilo '{}' creato.",
             "config_profile_create_failed": "Impossibile creare il profilo.",
@@ -5323,11 +5570,47 @@ class LanguageManager:
                 "Rileva automaticamente l'indirizzo MAC. "
                 "Se fallisce, verrà mostrata una guida."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Montaggio {} di {}: {}",
+            "status_mounted_progress": "✅ Montato {} di {}: {}",
+            "status_mount_failed_volume": "⚠ Montaggio non riuscito: {}",
+            "status_waiting_smb": "⏳ Attendo {} secondi per il servizio SMB...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Rilevamento volumi...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Nota: Tutti i volumi possono essere attivati o disattivati liberamente.",
+            "warning_no_volumes_selected": (
+                "Non hai attivato alcun volume.\n\n"
+                "Se salvi così, all'avvio del NAS non verrà montato automaticamente alcun volume.\n\n"
+                "Salvare comunque?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Destinazione dello spegnimento automatico:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Solo NAS",
+            "config_auto_shutdown_target_mac": "Solo Mac",
+            "config_auto_shutdown_target_none": "Spento",
+            "config_auto_shutdown_target_hint": "💡 Determina cosa succede allo scadere del timer automatico. I pulsanti di spegnimento cliccati manualmente non ne sono influenzati.",
+            "status_auto_timer_disabled": "⏸ Timer automatico disattivato",
+            "timer_shutdown_both": "Spegnimento automatico (Mac + NAS) tra {} secondi",
+            "timer_shutdown_nas": "Spegnimento automatico (solo NAS) tra {} secondi",
+            "timer_shutdown_mac": "Spegnimento automatico (solo Mac) tra {} secondi",
+            "say_timer_shutdown_both": "Spegnimento automatico di Mac e NAS tra {} secondi - Invio per solo NAS - Esc per annullare",
+            "say_timer_shutdown_nas": "Spegnimento automatico del NAS tra {} secondi - Invio per spegnimento immediato - Esc per annullare",
+            "say_timer_shutdown_mac": "Spegnimento automatico del Mac tra secondi - Invio per spegnimento immediato - Esc per annullare",
         },
         "🇳🇱 Nederlands"
         "nl": {
             "language": "Taal:",
-            "window_title": "NAS Beheer",
+            "window_title": "AnyNasPy - NAS Beheer",
             "status_checking": "Serververbinding controleren...",
             "status_online": "NAS Server is online ✓",
             "status_offline": "NAS Server is offline",
@@ -5468,7 +5751,7 @@ class LanguageManager:
             "ssh_key_create_question": "Wil je een nieuw SSH-sleutelpaar aanmaken?",
             "ssh_key_create_existing": "SSH-sleutel '{}' bestaat al.\nWil je deze overschrijven?",
             "ssh_key_create_comment": "Opmerking voor de SSH-sleutel (optioneel):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "SSH-sleutel aangemaakt: {}",
             "ssh_key_create_error": "Fout bij het aanmaken van SSH-sleutel",
             "ssh_key_create_timeout": "Tijd voor aanmaken SSH-sleutel verlopen",
@@ -5534,7 +5817,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Probeer wakeonlan...",
             "status_trying_etherwake": "Probeer etherwake...",
             "ssh_key_system_key_warning": "Veiligheids waarschuwing",
-            "ssh_key_system_key_message": "De naam '{}' is een systeemsleutel en wordt niet overschreven.\nKies een andere naam (bijv. synaspy_rsa).",
+            "ssh_key_system_key_message": "De naam '{}' is een systeemsleutel en wordt niet overschreven.\nKies een andere naam (bijv. anynaspy_rsa).",
             "profile_name_exists": "Er bestaat al een profiel met de naam '{}'.",
             "config_profile_created": "Profiel '{}' is aangemaakt.",
             "config_profile_create_failed": "Profiel kon niet worden aangemaakt.",
@@ -5960,11 +6243,47 @@ class LanguageManager:
                 "MAC-adres automatisch detecteren. "
                 "Als dit mislukt, wordt een handleiding weergegeven."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Mounten {} van {}: {}",
+            "status_mounted_progress": "✅ Gemount {} van {}: {}",
+            "status_mount_failed_volume": "⚠ Mounten mislukt: {}",
+            "status_waiting_smb": "⏳ Wachten {} seconden op SMB-dienst...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Volumes detecteren...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Opmerking: Alle volumes kunnen vrij worden in- of uitgeschakeld.",
+            "warning_no_volumes_selected": (
+                "Je hebt geen volumes ingeschakeld.\n\n"
+                "Als je zo opslaat, worden bij het starten van de NAS geen volumes automatisch gemount.\n\n"
+                "Toch opslaan?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Doel automatische afsluiting:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Alleen NAS",
+            "config_auto_shutdown_target_mac": "Alleen Mac",
+            "config_auto_shutdown_target_none": "Uit",
+            "config_auto_shutdown_target_hint": "💡 Bepaalt wat er gebeurt wanneer de auto-timer afloopt. Handmatig geklikte afsluitknoppen worden hierdoor niet beïnvloed.",
+            "status_auto_timer_disabled": "⏸ Auto-timer uitgeschakeld",
+            "timer_shutdown_both": "Automatische afsluiting (Mac + NAS) over {} seconden",
+            "timer_shutdown_nas": "Automatische afsluiting (alleen NAS) over {} seconden",
+            "timer_shutdown_mac": "Automatische afsluiting (alleen Mac) over {} seconden",
+            "say_timer_shutdown_both": "Automatische afsluiting van Mac en NAS over {} seconden - Enter voor alleen NAS - Escape om te annuleren",
+            "say_timer_shutdown_nas": "Automatische afsluiting van NAS over {} seconden - Enter voor onmiddellijke afsluiting - Escape om te annuleren",
+            "say_timer_shutdown_mac": "Automatische afsluiting van Mac over {} seconden - Enter voor onmiddellijke afsluiting - Escape om te annuleren",
         },
         # Norwegisch "🇳🇴 Norsk"
         "no": {
             "language": "Språk:",
-            "window_title": "NAS-administrasjon",
+            "window_title": "AnyNasPy - NAS-administrasjon",
             "status_checking": "Sjekker servertilkobling...",
             "status_online": "NAS-server er online ✓",
             "status_offline": "NAS-server er offline",
@@ -6105,7 +6424,7 @@ class LanguageManager:
             "ssh_key_create_question": "Vil du opprette et nytt SSH-nøkkelpar?",
             "ssh_key_create_existing": "SSH-nøkkel '{}' finnes allerede.\nVil du overskrive den?",
             "ssh_key_create_comment": "Kommentar for SSH-nøkkelen (valgfritt):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "SSH-nøkkel opprettet: {}",
             "ssh_key_create_error": "Feil ved opprettelse av SSH-nøkkel",
             "ssh_key_create_timeout": "Tidsavbrudd ved opprettelse av SSH-nøkkel",
@@ -6171,7 +6490,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Prøver wakeonlan...",
             "status_trying_etherwake": "Prøver etherwake...",
             "ssh_key_system_key_warning": "Sikkerhetsadvarsel",
-            "ssh_key_system_key_message": "Navnet '{}' er en systemnøkkel og vil ikke bli overskrevet.\nVennligst velg et annet navn (f.eks. synaspy_rsa).",
+            "ssh_key_system_key_message": "Navnet '{}' er en systemnøkkel og vil ikke bli overskrevet.\nVennligst velg et annet navn (f.eks. anynaspy_rsa).",
             "profile_name_exists": "En profil med navnet '{}' finnes allerede.",
             "config_profile_created": "Profilen '{}' ble opprettet.",
             "config_profile_create_failed": "Kunne ikke opprette profilen.",
@@ -6595,11 +6914,47 @@ class LanguageManager:
                 "Gjenkjenn MAC-adressen automatisk. "
                 "Hvis det mislykkes, vises en veiledning."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Monterer {} av {}: {}",
+            "status_mounted_progress": "✅ Montert {} av {}: {}",
+            "status_mount_failed_volume": "⚠ Montering mislyktes: {}",
+            "status_waiting_smb": "⏳ Venter {} sekunder på SMB-tjenesten...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Oppdager volumer...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Merk: Alle volumer kan fritt aktiveres eller deaktiveres.",
+            "warning_no_volumes_selected": (
+                "Du har ikke aktivert noen volumer.\n\n"
+                "Hvis du lagrer slik, vil ingen volumer monteres automatisk når NAS starter.\n\n"
+                "Lagre likevel?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Mål for automatisk avslutning:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Kun NAS",
+            "config_auto_shutdown_target_mac": "Kun Mac",
+            "config_auto_shutdown_target_none": "Av",
+            "config_auto_shutdown_target_hint": "💡 Bestemmer hva som skjer når auto-timeren utløper. Manuelt klikkede avslutningsknapper påvirkes ikke.",
+            "status_auto_timer_disabled": "⏸ Auto-timer deaktivert",
+            "timer_shutdown_both": "Automatisk avslutning (Mac + NAS) om {} sekunder",
+            "timer_shutdown_nas": "Automatisk avslutning (kun NAS) om {} sekunder",
+            "timer_shutdown_mac": "Automatisk avslutning (kun Mac) om {} sekunder",
+            "say_timer_shutdown_both": "Automatisk avslutning av Mac og NAS om {} sekunder - Enter for kun NAS - Escape for å avbryte",
+            "say_timer_shutdown_nas": "Automatisk avslutning av NAS om {} sekunder - Enter for umiddelbar avslutning - Escape for å avbryte",
+            "say_timer_shutdown_mac": "Automatisk avslutning av Mac om {} sekunder - Enter for umiddelbar avslutning - Escape for å avbryte",
         },
         # "🇵🇱 Polnisch"
         "pl": {
             "language": "Język:",
-            "window_title": "Zarządzanie NAS",
+            "window_title": "AnyNasPy - Zarządzanie NAS",
             "status_checking": "Sprawdzanie połączenia z serwerem...",
             "status_online": "Serwer NAS jest online ✓",
             "status_offline": "Serwer NAS jest offline",
@@ -6740,7 +7095,7 @@ class LanguageManager:
             "ssh_key_create_question": "Czy chcesz utworzyć nową parę kluczy SSH?",
             "ssh_key_create_existing": "Klucz SSH '{}' już istnieje.\nCzy chcesz go zastąpić?",
             "ssh_key_create_comment": "Komentarz do klucza SSH (opcjonalny):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "Utworzono klucz SSH: {}",
             "ssh_key_create_error": "Błąd podczas tworzenia klucza SSH",
             "ssh_key_create_timeout": "Przekroczono czas tworzenia klucza",
@@ -6806,7 +7161,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Próba wakeonlan...",
             "status_trying_etherwake": "Próba etherwake...",
             "ssh_key_system_key_warning": "Ostrzeżenie bezpieczeństwa",
-            "ssh_key_system_key_message": "Nazwa '{}' jest kluczem systemowym i nie zostanie nadpisana.\nWybierz inną nazwę (np. synaspy_rsa).",
+            "ssh_key_system_key_message": "Nazwa '{}' jest kluczem systemowym i nie zostanie nadpisana.\nWybierz inną nazwę (np. anynaspy_rsa).",
             "profile_name_exists": "Profil o nazwie '{}' już istnieje.",
             "config_profile_created": "Profil '{}' został utworzony.",
             "config_profile_create_failed": "Nie udało się utworzyć profilu.",
@@ -7230,11 +7585,47 @@ class LanguageManager:
                 "Automatycznie wykryj adres MAC. "
                 "Jeśli się nie powiedzie, zostanie wyświetlony przewodnik."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Montowanie {} z {}: {}",
+            "status_mounted_progress": "✅ Zamontowano {} z {}: {}",
+            "status_mount_failed_volume": "⚠ Montowanie nie powiodło się: {}",
+            "status_waiting_smb": "⏳ Oczekiwanie {} sekund na usługę SMB...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Wykrywanie wolumenów...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Uwaga: Wszystkie wolumeny można dowolnie włączać lub wyłączać.",
+            "warning_no_volumes_selected": (
+                "Nie aktywowano żadnych wolumenów.\n\n"
+                "Jeśli zapiszesz w ten sposób, przy starcie NAS żadne wolumeny nie zostaną automatycznie zamontowane.\n\n"
+                "Zapisać mimo to?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Cel automatycznego wyłączania:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Tylko NAS",
+            "config_auto_shutdown_target_mac": "Tylko Mac",
+            "config_auto_shutdown_target_none": "Wyłączone",
+            "config_auto_shutdown_target_hint": "💡 Określa, co dzieje się po upływie automatycznego timera. Ręcznie kliknięte przyciski wyłączania nie są tym objęte.",
+            "status_auto_timer_disabled": "⏸ Automatyczny timer wyłączony",
+            "timer_shutdown_both": "Automatyczne wyłączanie (Mac + NAS) za {} sekund",
+            "timer_shutdown_nas": "Automatyczne wyłączanie (tylko NAS) za {} sekund",
+            "timer_shutdown_mac": "Automatyczne wyłączanie (tylko Mac) za {} sekund",
+            "say_timer_shutdown_b bototh": "Automatyczne wyłączanie Macaões i NAS za {} sekund - de Enter dla tylko NAS - Escape, aby anul desować",
+            "say_timerlig_shutdown_nas": "Automatyczne wyłączanieamento NAS za {} sekund - Enter dla natychmiastowego wyłączenia - Escape, aby anulować",
+            "say_timer_shutdown_mac": "Automatyczne wyłączanie Maca za {} sekund - Enter dla natychmiastowego wyłączenia - Escape, aby anulować",
         },
         # "🇵🇹 Português"
         "pt": {
             "language": "Idioma:",
-            "window_title": "Gestão NAS",
+            "window_title": "AnyNasPy - Gestão NAS",
             "status_checking": "A verificar ligação ao servidor...",
             "status_online": "Servidor NAS online ✓",
             "status_offline": "Servidor NAS offline",
@@ -7375,7 +7766,7 @@ class LanguageManager:
             "ssh_key_create_question": "Deseja criar um novo par de chaves SSH?",
             "ssh_key_create_existing": "A chave SSH '{}' já existe.\nDeseja sobrescrevê-la?",
             "ssh_key_create_comment": "Comentário para a chave SSH (opcional):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "Chave SSH criada: {}",
             "ssh_key_create_error": "Erro ao criar chave SSH",
             "ssh_key_create_timeout": "Tempo limite para criação da chave SSH excedido",
@@ -7441,7 +7832,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Tentando wakeonlan...",
             "status_trying_etherwake": "Tentando etherwake...",
             "ssh_key_system_key_warning": "Aviso de segurança",
-            "ssh_key_system_key_message": "O nome '{}' é uma chave de sistema e não será sobrescrito.\nPor favor, escolha outro nome (ex. synaspy_rsa).",
+            "ssh_key_system_key_message": "O nome '{}' é uma chave de sistema e não será sobrescrito.\nPor favor, escolha outro nome (ex. anynaspy_rsa).",
             "profile_name_exists": "Já existe um perfil com o nome '{}'.",
             "config_profile_created": "Perfil '{}' foi criado.",
             "config_profile_create_failed": "Não foi possível criar o perfil.",
@@ -7866,11 +8257,47 @@ class LanguageManager:
                 "Detetar o endereço MAC automaticamente. "
                 "Se falhar, será apresentado um guia."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Montando {} de {}: {}",
+            "status_mounted_progress": "✅ Montado {} de {}: {}",
+            "status_mount_failed_volume": "⚠ Falha ao montar: {}",
+            "status_waiting_smb": "⏳ Aguardando {} segundos pelo serviço SMB...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Detetando volumes...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Nota: Todos os volumes podem ser ativados ou desativados livremente.",
+            "warning_no_volumes_selected": (
+                "Não ativou nenhum volume.\n\n"
+                "Se guardar assim, nenhum volume será montado automaticamente ao iniciar o NAS.\n\n"
+                "Guardar mesmo assim?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Alvo do desligamento automático:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Apenas NAS",
+            "config_auto_shutdown_target_mac": "Apenas Mac",
+            "config_auto_shutdown_target_none": "Desligado",
+            "config_auto_shutdown_target_hint": "💡 Determina o que acontece quando o temporizador automático expira. Os clicados manualmente não são afetados.",
+            "status_auto_timer_disabled": "⏸ Temporizador automático desativado",
+            "timer_shutdown_both": "Desligamento automático (Mac + NAS) em {} segundos",
+            "timer_shutdown_nas": "Desligamento automático (apenas NAS) em {} segundos",
+            "timer_shutdown_mac": "Desligamento automático (apenas Mac) em {} segundos",
+            "say_timer_shutdown_both": "Desligamento automático do Mac e NAS em {} segundos - Enter para apenas NAS - Escape para cancelar",
+            "say_timer_shutdown_nas": "Desligamento automático do NAS em {} segundos - Enter para desligamento imediato - Escape para cancelar",
+            "say_timer_shutdown_mac": "Desligamento automático do Mac em {} segundos - Enter para desligamento imediato - Escape para cancelar",
         },
         # "🇷🇺 Russisch"
         "ru": {
             "language": "Язык:",
-            "window_title": "Управление NAS",
+            "window_title": "AnyNasPy - Управление NAS",
             "status_checking": "Проверка подключения к серверу...",
             "status_online": "Сервер NAS онлайн ✓",
             "status_offline": "Сервер NAS офлайн",
@@ -8011,7 +8438,7 @@ class LanguageManager:
             "ssh_key_create_question": "Хотите создать новую пару SSH-ключей?",
             "ssh_key_create_existing": "SSH-ключ '{}' уже существует.\nХотите перезаписать его?",
             "ssh_key_create_comment": "Комментарий к SSH-ключу (необязательно):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "SSH-ключ создан: {}",
             "ssh_key_create_error": "Ошибка при создании SSH-ключа",
             "ssh_key_create_timeout": "Превышено время создания ключа",
@@ -8077,7 +8504,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Пробуем wakeonlan...",
             "status_trying_etherwake": "Пробуем etherwake...",
             "ssh_key_system_key_warning": "Предупреждение безопасности",
-            "ssh_key_system_key_message": "Имя '{}' является системным ключом и не будет перезаписано.\nПожалуйста, выберите другое имя (например, synaspy_rsa).",
+            "ssh_key_system_key_message": "Имя '{}' является системным ключом и не будет перезаписано.\nПожалуйста, выберите другое имя (например, anynaspy_rsa).",
             "profile_name_exists": "Профиль с именем '{}' уже существует.",
             "config_profile_created": "Профиль '{}' создан.",
             "config_profile_create_failed": "Не удалось создать профиль.",
@@ -8502,11 +8929,47 @@ class LanguageManager:
                 "Автоматически определить MAC-адрес. "
                 "Если не удастся, будет показано руководство."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Монтирование {} из {}: {}",
+            "status_mounted_progress": "✅ Смонтировано {} из {}: {}",
+            "status_mount_failed_volume": "⚠ Не удалось смонтировать: {}",
+            "status_waiting_smb": "⏳ Ожидание {} секунд для службы SMB...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Обнаружение томов...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Примечание: Все тома можно свободно включать или отключать.",
+            "warning_no_volumes_selected": (
+                "Вы не активировали ни одного тома.\n\n"
+                "Если сохранить так, при запуске NAS ни один том не будет смонтирован автоматически.\n\n"
+                "Всё равно сохранить?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Цель авто-выключения:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Только NAS",
+            "config_auto_shutdown_target_mac": "Только Mac",
+            "config_auto_shutdown_target_none": "Выкл.",
+            "config_auto_shutdown_target_hint": "💡 Определяет, что произойдёт по истечении автотаймера. Кнопки выключения, нажатые вручную, на это не влияют.",
+            "status_auto_timer_disabled": "⏸ Авто-таймер отключён",
+            "timer_shutdown_both": "Авто-выключение (Mac + NAS) через {} секунд",
+            "timer_shutdown_nas": "Авто-выключение (только NAS) через {} секунд",
+            "timer_shutdown_mac": "Авто-выключение (только Mac) через {} секунд",
+            "say_timer_shutdown_both": "Авто-выключение Mac и NAS через {} секунд - Enter — только NAS - Escape — отмена",
+            "say_timer_shutdown_nas": "Авто-выключение NAS через {} секунд - Enter — немедленное выключение - Escape — отмена",
+            "say_timer_shutdown_mac": "Авто-выключение Mac через {} секунд - Enter — немедленное выключение - Escape — отмена",
         },
         # "🇫🇮 Suomi" (Finnisch)
         "fi": {
             "language": "Kieli:",
-            "window_title": "NAS-hallinta",
+            "window_title": "AnyNasPy - NAS-hallinta",
             "status_checking": "Tarkistetaan palvelinyhteyttä...",
             "status_online": "NAS-palvelin on verkossa ✓",
             "status_offline": "NAS-palvelin ei ole verkossa",
@@ -8647,7 +9110,7 @@ class LanguageManager:
             "ssh_key_create_question": "Haluatko luoda uuden SSH-avainparin?",
             "ssh_key_create_existing": "SSH-avain '{}' on jo olemassa.\nHaluatko korvata sen?",
             "ssh_key_create_comment": "Kommentti SSH-avaimelle (valinnainen):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "SSH-avain luotu: {}",
             "ssh_key_create_error": "Virhe SSH-avaimen luonnissa",
             "ssh_key_create_timeout": "SSH-avaimen luonti aikakatkaistiin",
@@ -8713,7 +9176,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Yritetään wakeonlan...",
             "status_trying_etherwake": "Yritetään etherwake...",
             "ssh_key_system_key_warning": "Turvallisuusvaroitus",
-            "ssh_key_system_key_message": "Nimi '{}' on järjestelmäavain, eikä sitä kirjoiteta yli.\nValitse toinen nimi (esim. synaspy_rsa).",
+            "ssh_key_system_key_message": "Nimi '{}' on järjestelmäavain, eikä sitä kirjoiteta yli.\nValitse toinen nimi (esim. anynaspy_rsa).",
             "profile_name_exists": "Profiili nimellä '{}' on jo olemassa.",
             "config_profile_created": "Profiili '{}' luotiin.",
             "config_profile_create_failed": "Profiilin luominen epäonnistui.",
@@ -9138,11 +9601,47 @@ class LanguageManager:
                 "Tunnista MAC-osoite automaattisesti. "
                 "Jos se epäonnistuu, opas näytetään."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Liitetään {} / {}: {}",
+            "status_mounted_progress": "✅ Liitetty {} / {}: {}",
+            "status_mount_failed_volume": "⚠ Liittäminen epäonnistui: {}",
+            "status_waiting_smb": "⏳ Odotetaan {} sekuntia SMB-palvelua...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Tunnistetaan taltioita...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Huomautus: Kaikki taltiot voidaan vapaasti ottaa käyttöön tai poistaa käytöstä.",
+            "warning_no_volumes_selected": (
+                "Et ole ottanut käyttöön yhtään taltiota.\n\n"
+                "Jos tallennat näin, NASin käynnistyessä yhtään taltiota ei liitetä automaattisesti.\n\n"
+                "Tallennetaanko silti?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Automaattisen sammutuksen kohde:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Vain NAS",
+            "config_auto_shutdown_target_mac": "Vain Mac",
+            "config_auto_shutdown_target_none": "Pois",
+            "config_auto_shutdown_target_hint": "💡 Määrittää, mitä tapahtuu automaattiajastimen päättyessä. Manuaalisesti klikatut sammutuspainikkeet eivät ole tämän vaikutuksen alaisia.",
+            "status_auto_timer_disabled": "⏸ Automaattiajastin poistettu käytöstä",
+            "timer_shutdown_both": "Automaattinen sammutus (Mac + NAS) {} sekunnin kuluttua",
+            "timer_shutdown_nas": "Automaattinen sammutus (vain NAS) {} sekunnin kuluttua",
+            "timer_shutdown_mac": "Automaattinen sammutus (vain Mac) {} sekunnin kuluttua",
+            "say_timer_shutdown_both": "Macin ja NASin automaattinen sammutus {} sekunnin kuluttua - Enter vain NASille - Escape peruuttaa",
+            "say_timer_shutdown_nas": "NASin automaattinen sammutus {} sekunnin kuluttua - Enter välittömään sammutukseen - Escape peruuttaa",
+            "say_timer_shutdown_mac": "Macin automaattinen sammutus {} sekunnin kuluttua - Enter välittömään sammutukseen - Escape peruuttaa",
         },
         # "🇸🇪 Svenska (sv)" # Schwedisch
         "sv": {
             "language": "Språk:",
-            "window_title": "NAS-hantering",
+            "window_title": "AnyNasPy - NAS-hantering",
             "status_checking": "Kontrollerar serveranslutning...",
             "status_online": "NAS-server är online ✓",
             "status_offline": "NAS-server är offline",
@@ -9283,7 +9782,7 @@ class LanguageManager:
             "ssh_key_create_question": "Vill du skapa ett nytt SSH-nyckelpar?",
             "ssh_key_create_existing": "SSH-nyckeln '{}' finns redan.\nVill du skriva över den?",
             "ssh_key_create_comment": "Kommentar för SSH-nyckeln (valfritt):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "SSH-nyckel skapad: {}",
             "ssh_key_create_error": "Fel vid skapande av SSH-nyckel",
             "ssh_key_create_timeout": "Tidsgräns för SSH-nyckel skapande överskriden",
@@ -9349,7 +9848,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Försöker wakeonlan...",
             "status_trying_etherwake": "Försöker etherwake...",
             "ssh_key_system_key_warning": "Säkerhetsvarning",
-            "ssh_key_system_key_message": "Namnet '{}' är en systemnyckel och kommer inte att skrivas över.\nVälj ett annat namn (t.ex. synaspy_rsa).",
+            "ssh_key_system_key_message": "Namnet '{}' är en systemnyckel och kommer inte att skrivas över.\nVälj ett annat namn (t.ex. anynaspy_rsa).",
             "profile_name_exists": "En profil med namnet '{}' finns redan.",
             "config_profile_created": "Profilen '{}' har skapats.",
             "config_profile_create_failed": "Det gick inte att skapa profilen.",
@@ -9774,11 +10273,47 @@ class LanguageManager:
                 "Identifiera MAC-adressen automatiskt. "
                 "Om det misslyckas visas en guide."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Monterar {} av {}: {}",
+            "status_mounted_progress": "✅ Monterat {} av {}: {}",
+            "status_mount_failed_volume": "⚠ Montering misslyckades: {}",
+            "status_waiting_smb": "⏳ Väntar {} sekunder på SMB-tjänsten...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Identifierar volymer...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Obs: Alla volymer kan fritt aktiveras eller inaktiveras.",
+            "warning_no_volumes_selected": (
+                "Du har inte aktiverat några volymer.\n\n"
+                "Om du sparar så här kommer inga volymer att monteras automatiskt när NAS startar.\n\n"
+                "Spara ändå?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Mål för automatisk avstängning:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Endast NAS",
+            "config_auto_shutdown_target_mac": "Endast Mac",
+            "config_auto_shutdown_target_none": "Av",
+            "config_auto_shutdown_target_hint": "💡 Bestämmer vad som händer när den automatiska timern löper ut. Manuellt klickade avstängningsknappar påverkas inte.",
+            "status_auto_timer_disabled": "⏸ Auto-timer inaktiverad",
+            "timer_shutdown_both": "Automatisk avstängning (Mac + NAS) om {} sekunder",
+            "timer_shutdown_nas": "Automatisk avstängning (endast NAS) om {} sekunder",
+            "timer_shutdown_mac": "Automatisk avstängning (endast Mac) om {} sekunder",
+            "say_timer_shutdown_both": "Automatisk avstängning av Mac och NAS om {} sekunder - Enter för endast NAS - Escape för att avbryta",
+            "say_timer_shutdown_nas": "Automatisk avstängning av NAS om {} sekunder - Enter för omedelbar avstängning - Escape för att avbryta",
+            "say_timer_shutdown_mac": "Automatisk avstängning av Mac om {} sekunder - Enter för omedelbar avstängning - Escape för att avbryta",
         },
         # "🇹🇷 Türkçe (Türkisch)
         "tr": {
             "language": "Dil:",
-            "window_title": "NAS Yönetimi",
+            "window_title": "AnyNasPy - NAS Yönetimi",
             "status_checking": "Sunucu bağlantısı kontrol ediliyor...",
             "status_online": "NAS sunucusu çevrimiçi ✓",
             "status_offline": "NAS sunucusu çevrimdışı",
@@ -9919,7 +10454,7 @@ class LanguageManager:
             "ssh_key_create_question": "Yeni bir SSH anahtar çifti oluşturmak ister misiniz?",
             "ssh_key_create_existing": "'{}' SSH anahtarı zaten mevcut.\nÜzerine yazmak ister misiniz?",
             "ssh_key_create_comment": "SSH anahtarı için yorum (isteğe bağlı):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "SSH anahtarı oluşturuldu: {}",
             "ssh_key_create_error": "SSH anahtarı oluşturulurken hata",
             "ssh_key_create_timeout": "Anahtar oluşturma zaman aşımı",
@@ -9985,7 +10520,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "wakeonlan deneniyor...",
             "status_trying_etherwake": "etherwake deneniyor...",
             "ssh_key_system_key_warning": "Güvenlik uyarısı",
-            "ssh_key_system_key_message": "'{}' adı bir sistem anahtarıdır ve üzerine yazılmayacaktır.\nLütfen başka bir ad seçin (ör. synaspy_rsa).",
+            "ssh_key_system_key_message": "'{}' adı bir sistem anahtarıdır ve üzerine yazılmayacaktır.\nLütfen başka bir ad seçin (ör. anynaspy_rsa).",
             "profile_name_exists": "'{}' adında bir profil zaten mevcut.",
             "config_profile_created": "'{}' profili oluşturuldu.",
             "config_profile_create_failed": "Profil oluşturulamadı.",
@@ -10409,11 +10944,47 @@ class LanguageManager:
                 "MAC adresini otomatik algıla. "
                 "Başarısız olursa bir kılavuz gösterilir."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 {} / {} bağlanıyor: {}",
+            "status_mounted_progress": "✅ {} / {} bağlandı: {}",
+            "status_mount_failed_volume": "⚠ Bağlama başarısız: {}",
+            "status_waiting_smb": "⏳ SMB hizmeti için {} saniye bekleniyor...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Birimler algılanıyor...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Not: Tüm birimler serbestçe etkinleştirilebilir veya devre dışı bırakılabilir.",
+            "warning_no_volumes_selected": (
+                "Hiçbir birim etkinleştirmediniz.\n\n"
+                "Bu şekilde kaydederseniz, NAS başlatıldığında hiçbir birim otomatik olarak bağlanmaz.\n\n"
+                "Yine de kaydetilsin mi?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Otomatik kapatma hedefi:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Yalnızca NAS",
+            "config_auto_shutdown_target_mac": "Yalnızca Mac",
+            "config_auto_shutdown_target_none": "Kapalı",
+            "config_auto_shutdown_target_hint": "💡 Otomatik zamanlayıcı dolduğunda ne olacağını belirler. Elle tıklanan kapatma düğmeleri bundan etkilenmez.",
+            "status_auto_timer_disabled": "⏸ Otomatik zamanlayıcı devre dışı",
+            "timer_shutdown_both": "Otomatik kapatma (Mac + NAS) {} saniye içinde",
+            "timer_shutdown_nas": "Otomatik kapatma (Yalnızca NAS) {} saniye içinde",
+            "timer_shutdown_mac": "Otomatik kapatma (Yalnızca Mac) {} saniye içinde",
+            "say_timer_shutdown_both": "Mac ve NAS otomatik kapatma {} saniye içinde - Yalnızca NAS için Enter - İptal için Escape",
+            "say_timer_shutdown_nas": "NAS otomatik kapatma {} saniye içinde - Hemen kapatma için Enter - İptal için Escape",
+            "say_timer_shutdown_mac": "Mac otomatik kapatma {} saniye içinde - Hemen kapatma için Enter - İptal için Escape",
         },
         # "🇻🇳 Tiếng Việt"
         "vi": {
             # Main window
-            "window_title": "Quản lý NAS",
+            "window_title": "AnyNasPy - Quản lý NAS",
             "status_checking": "Đang kiểm tra kết nối máy chủ...",
             "status_online": "Máy chủ NAS đang trực tuyến ✓",
             "status_offline": "Máy chủ NAS đang ngoại tuyến",
@@ -10565,7 +11136,7 @@ class LanguageManager:
             "ssh_key_create_question": "Bạn có muốn tạo cặp SSH key mới không?",
             "ssh_key_create_existing": "SSH key '{}' đã tồn tại.\nBạn có muốn ghi đè không?",
             "ssh_key_create_comment": "Nhận xét cho SSH key (không bắt buộc):",
-            "ssh_key_create_comment_default": "synaspy-{}",
+            "ssh_key_create_comment_default": "anynaspy-{}",
             "ssh_key_create_success": "Đã tạo SSH key: {}",
             "ssh_key_create_error": "Lỗi khi tạo SSH key",
             "ssh_key_create_timeout": "Quá thời gian tạo SSH key",
@@ -10631,7 +11202,7 @@ class LanguageManager:
             "status_trying_wakeonlan": "Đang thử wakeonlan...",
             "status_trying_etherwake": "Đang thử etherwake...",
             "ssh_key_system_key_warning": "Cảnh báo bảo mật",
-            "ssh_key_system_key_message": "Tên '{}' là khóa hệ thống và sẽ không bị ghi đè.\nVui lòng chọn tên khác (ví dụ: synaspy_rsa).",
+            "ssh_key_system_key_message": "Tên '{}' là khóa hệ thống và sẽ không bị ghi đè.\nVui lòng chọn tên khác (ví dụ: anynaspy_rsa).",
             "profile_name_exists": "Hồ sơ với tên '{}' đã tồn tại.",
             "config_profile_created": "Hồ sơ '{}' đã được tạo.",
             "config_profile_create_failed": "Không thể tạo hồ sơ.",
@@ -11056,6 +11627,42 @@ class LanguageManager:
                 "Tự động phát hiện địa chỉ MAC. "
                 "Nếu thất bại, hướng dẫn sẽ được hiển thị."
             ),
+            # =========================================================
+            # SERVER START Statusmeldungen
+            # =========================================================
+            "status_mounting_progress": "📂 Đang gắn kết {} / {}: {}",
+            "status_mounted_progress": "✅ Đã gắn kết {} / {}: {}",
+            "status_mount_failed_volume": "⚠ Gắn kết thất bại: {}",
+            "status_waiting_smb": "⏳ Đang chờ {} giây cho dịch vụ SMB...",
+            # =========================================================
+            # VOLUME ERKENNUNG Statusmeldungen
+            # =========================================================
+            "volumes_detection_in_progress": "🔍 Đang phát hiện ổ đĩa...",
+            # =========================================================
+            # VOLUMES FREI WÄHLBAR
+            # =========================================================
+            "volumes_hint_v2": "Lưu ý: Tất cả các ổ đĩa có thể được bật hoặc tắt tự do.",
+            "warning_no_volumes_selected": (
+                "Bạn chưa bật ổ đĩa nào.\n\n"
+                "Nếu lưu như vậy, khi NAS khởi động sẽ không có ổ đĩa nào được gắn kết tự động.\n\n"
+                "Vẫn lưu chứ?"
+            ),
+            # =========================================================
+            # AUTO START Ziel und Statusmeldungen
+            # =========================================================
+            "config_auto_shutdown_target": "Mục tiêu tự động tắt:",
+            "config_auto_shutdown_target_both": "Mac + NAS",
+            "config_auto_shutdown_target_nas": "Chỉ NAS",
+            "config_auto_shutdown_target_mac": "Chỉ Mac",
+            "config_auto_shutdown_target_none": "Tắt",
+            "config_auto_shutdown_target_hint": "💡 Xác định điều gì xảy ra khi hết bộ đếm tự động. Các nút tắt được nhấp thủ công không bị ảnh hưởng.",
+            "status_auto_timer_disabled": "⏸ Bộ đếm tự động đã tắt",
+            "timer_shutdown_both": "Tự động tắt (Mac + NAS) sau {} giây",
+            "timer_shutdown_nas": "Tự động tắt (Chỉ NAS) sau {} giây",
+            "timer_shutdown_mac": "Tự động tắt (Chỉ Mac) sau {} giây",
+            "say_timer_shutdown_both": "Tự động tắt Mac và NAS sau {} giây - Enter cho chỉ NAS - Escape để hủy",
+            "say_timer_shutdown_nas": "Tự động tắt NAS sau {} giây - Enter để tắt ngay - Escape để hủy",
+            "say_timer_shutdown_mac": "Tự động tắt Mac sau {} giây - Enter để tắt ngay - Escape để hủy",
         },
     }
 
@@ -11148,7 +11755,7 @@ class AppLogger:
 
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.max_files = 5
+        self.max_files = 10
         self.current_log_file = None
         self.log_buffer = []
         self.buffer_size = 10  # Nach 10 Einträgen wird geschrieben
@@ -11195,7 +11802,7 @@ class AppLogger:
             f.write("-" * 80 + "\n\n")
 
         # Log-Start schreiben
-        self.log("=== SYNASPY GESTARTET ===", "START")
+        self.log("=== ANYNASPY GESTARTET ===", "START")
 
     def _rotate_if_too_big(self):
         if self.current_log_file and self.current_log_file.exists():
@@ -11350,7 +11957,7 @@ class AppLogger:
         """Wird beim Programmende automatisch aufgerufen (atexit)."""
         try:
             self.flush()
-            self.log("=== SYNASPY BEENDET (atexit) ===", "STOP")
+            self.log("=== ANYNASPY BEENDET (atexit) ===", "STOP")
             self.flush()
         except Exception:
             # Niemals beim Beenden crashen
@@ -11644,6 +12251,7 @@ class ServerProfile:
         "custom_shutdown_command": "sudo shutdown -h now",
         "volume_list": [],   # ⬅️ LEER — User trägt seine Volumes selbst ein
         "auto_shutdown_delay": 120,
+        "auto_shutdown_target": "both",   # ⬅️ NEU: "both" oder "nas_only"
         "auto_start_delay": 120,
         "wol_wait_time": 180,
         "smb_wait_time": 30,
@@ -11668,6 +12276,7 @@ class ServerProfile:
             {"name": v, "checked": True} for v in self.volume_list
         ]
         self.auto_shutdown_delay = 120
+        self.auto_shutdown_target = "both"   # ⬅️ NEU
         self.auto_start_delay = 120
         self.wol_wait_time = 180
         self.smb_wait_time = 30
@@ -11689,6 +12298,7 @@ class ServerProfile:
             "volume_list": self.volume_list,
             "volume_list_with_state": self.volume_list_with_state,  # NEU
             "auto_shutdown_delay": self.auto_shutdown_delay,
+            "auto_shutdown_target": self.auto_shutdown_target,   # ⬅️ NEU
             "auto_start_delay": self.auto_start_delay,
             "wol_wait_time": self.wol_wait_time,
             "smb_wait_time": self.smb_wait_time,
@@ -11716,6 +12326,7 @@ class ServerProfile:
             [{"name": v, "checked": True} for v in profile.volume_list],
         )
         profile.auto_shutdown_delay = data.get("auto_shutdown_delay", 120)
+        profile.auto_shutdown_target = data.get("auto_shutdown_target", "both")
         profile.auto_start_delay = data.get("auto_start_delay", 120)
         profile.wol_wait_time = data.get("wol_wait_time", 180)
         profile.smb_wait_time = data.get("smb_wait_time", 30)
@@ -11736,6 +12347,7 @@ class ServerProfile:
             # "volume_list": self.volume_list,
             "volume_list_with_state": self.volume_list_with_state,  # WICHTIG
             "auto_shutdown_delay": self.auto_shutdown_delay,
+            "auto_shutdown_target": self.auto_shutdown_target,   # ⬅️ NEU
             "auto_start_delay": self.auto_start_delay,
             "wol_wait_time": self.wol_wait_time,
             "smb_wait_time": self.smb_wait_time,
@@ -11945,6 +12557,7 @@ class ServerProfileManager:
         new_profile.volume_list = original.volume_list.copy()
         new_profile.volume_list_with_state = original.volume_list_with_state.copy()
         new_profile.auto_shutdown_delay = original.auto_shutdown_delay
+        new_profile.auto_shutdown_target = original.auto_shutdown_target   # ⬅️ NEU
         new_profile.auto_start_delay = original.auto_start_delay
         new_profile.wol_wait_time = original.wol_wait_time
         new_profile.smb_wait_time = original.smb_wait_time
@@ -11998,6 +12611,9 @@ class ServerProfileManager:
         )
         profile.auto_shutdown_delay = config_dict.get(
             "auto_shutdown_delay", profile.auto_shutdown_delay
+        )
+        profile.auto_shutdown_target = config_dict.get(   # ⬅️ NEU
+            "auto_shutdown_target", profile.auto_shutdown_target
         )
         profile.auto_start_delay = config_dict.get(
             "auto_start_delay", profile.auto_start_delay
@@ -12061,7 +12677,79 @@ class Config:
         self.org_name = "AnyNasPy"
         self.settings = QSettings(self.org_name, self.app_name)
         self.config_dir = Path.home() / "Library/Application Support/AnyNasPy"
-        self.config_file = self.config_dir / "synaspy_config.json"
+        self.config_file = self.config_dir / "anynaspy_config.json"
+
+        # ⭐ Migration von SyNasPy, falls nötig
+        self._migrate_from_synaspy()
+
+        self.profile_manager = ServerProfileManager()
+        self.config = {}
+        self.load_config()
+
+    def _migrate_from_synaspy(self):
+        """
+        Migriert Daten vom alten SyNasPy-Verzeichnis (falls vorhanden).
+        Wird nur einmalig ausgeführt — markiert mit einer Marker-Datei.
+        """
+        try:
+            old_dir = Path.home() / "Library/Application Support/SyNasPy"
+            new_dir = self.config_dir
+
+            # Keine Migration nötig wenn altes Verzeichnis fehlt
+            if not old_dir.exists():
+                return
+
+            # Prüfen ob schon migriert
+            marker = new_dir / ".migrated_from_synaspy"
+            if marker.exists():
+                print("✅ Migration bereits durchgeführt")
+                return
+
+            new_dir.mkdir(parents=True, exist_ok=True)
+
+            import shutil
+
+            # ─── 1. Config-Datei ───
+            old_config = old_dir / "synaspy_config.json"
+            new_config = new_dir / "anynaspy_config.json"
+            if old_config.exists() and not new_config.exists():
+                shutil.copy2(old_config, new_config)
+                print(f"✅ Migration: {old_config.name} → {new_config.name}")
+
+            # ─── 2. Server-Profile ───
+            old_profiles = old_dir / "server_profiles.json"
+            new_profiles = new_dir / "server_profiles.json"
+            if old_profiles.exists() and not new_profiles.exists():
+                shutil.copy2(old_profiles, new_profiles)
+                print(f"✅ Migration: {old_profiles.name} → {new_profiles.name}")
+
+            # ─── 3. Logs (optional, für historische Auswertung) ───
+            old_logs = old_dir / "Logs"
+            new_logs = new_dir / "Logs"
+            if old_logs.exists() and not new_logs.exists():
+                try:
+                    shutil.copytree(old_logs, new_logs)
+                    print(f"✅ Migration: Logs kopiert")
+                except Exception as e:
+                    print(f"⚠ Logs-Migration fehlgeschlagen: {e}")
+
+            # ─── Marker setzen ───
+            marker.write_text(
+                f"Migration von SyNasPy durchgeführt: "
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"Altes Verzeichnis: {old_dir}\n"
+                f"Neues Verzeichnis: {new_dir}\n"
+            )
+            print(f"✅ Migration abgeschlossen. Marker: {marker}")
+
+        except Exception as e:
+            # Migration darf App-Start nicht verhindern
+            print(f"⚠ Migration fehlgeschlagen (nicht kritisch): {e}")
+        self.app_name = "AnyNasPy"
+        self.org_name = "AnyNasPy"
+        self.settings = QSettings(self.org_name, self.app_name)
+        self.config_dir = Path.home() / "Library/Application Support/AnyNasPy"
+        self.config_file = self.config_dir / "anynaspy_config.json"
         self.profile_manager = ServerProfileManager()
         self.config = {}
         self.load_config()
@@ -12102,6 +12790,7 @@ class Config:
                 active_profile.volume_list_with_state
             )
             self.config["auto_shutdown_delay"] = active_profile.auto_shutdown_delay
+            self.config["auto_shutdown_target"] = active_profile.auto_shutdown_target   # ⬅️ NEU
             self.config["auto_start_delay"] = active_profile.auto_start_delay
             self.config["wol_wait_time"] = active_profile.wol_wait_time
             self.config["smb_wait_time"] = active_profile.smb_wait_time
@@ -12158,8 +12847,9 @@ class Config:
             active_profile.volume_list_with_state = self.config.get(
                 "volume_list_with_state", []
             )
-            active_profile.auto_shutdown_delay = self.config.get(
-                "auto_shutdown_delay", 120
+            active_profile.auto_shutdown_delay = self.config.get("auto_shutdown_delay", 120)
+            active_profile.auto_shutdown_target = self.config.get(   # ⬅️ NEU
+                "auto_shutdown_target", "both"
             )
             active_profile.auto_start_delay = self.config.get("auto_start_delay", 120)
             active_profile.wol_wait_time = self.config.get("wol_wait_time", 180)
@@ -12435,7 +13125,7 @@ class ConfigDialog(QDialog):
             except:
                 pass
 
-        title_label = QLabel("Synology NAS Management")
+        title_label = QLabel("Universal NAS Management")
         title_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #ffffff;")
         title_label.setAlignment(Qt.AlignCenter)
         header_layout.addWidget(title_label)
@@ -13054,8 +13744,8 @@ class ConfigDialog(QDialog):
                 widget.setVisible(is_custom)
 
             self.logger.log_action(
-                "Hersteller geändert",
-                f"Neu: {vendor_key} (Benutzerdefiniert: {is_custom})",
+                "Hersteller ausgewählt",
+                f": {vendor_key} (Benutzerdefiniert: {is_custom})",
             )
         except Exception as e:
             self.logger.log_error(
@@ -13195,7 +13885,7 @@ class ConfigDialog(QDialog):
         volumes_layout.addLayout(btn_grid)
 
         # Hinweis
-        self.volumes_hint = QLabel(tr("volumes_hint"))
+        self.volumes_hint = QLabel(tr("volumes_hint_v2"))
         self.volumes_hint.setStyleSheet("color: #888888; font-size: 11px;")
         self.volumes_hint.setWordWrap(True)
         volumes_layout.addWidget(self.volumes_hint)
@@ -13214,17 +13904,16 @@ class ConfigDialog(QDialog):
             # Fallback: aus volume_list eine Liste mit aktiv erstellen
             volume_names = self.config.get("volume_list", [])
             volume_state = [{"name": v, "checked": True} for v in volume_names]
+
         for entry in volume_state:
             name = entry.get("name", "")
             checked = entry.get("checked", True)
             item = QListWidgetItem(name)
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setCheckState(Qt.Checked if checked else Qt.Unchecked)
-            # Erstes Item ist immer aktiv und nicht deaktivierbar
-            if self.volume_list_widget.count() == 0:
-                item.setFlags(item.flags() & ~Qt.ItemIsUserCheckable)
-                item.setCheckState(Qt.Checked)
+            # ⭐ v2.3.0: Kein Zwangs-Häkchen mehr — alle Volumes frei wählbar
             self.volume_list_widget.addItem(item)
+
         self.update_select_all_button_state()
 
     def update_select_all_button_state(self):
@@ -13234,19 +13923,23 @@ class ConfigDialog(QDialog):
             self.select_all_btn_vol.setChecked(False)
             self.select_all_btn_vol.setEnabled(False)
             return
+
         all_checked = True
-        for i in range(1, count):  # erstes überspringen
+        # ⭐ v2.3.0: ALLE Volumes prüfen (kein Skip für erstes Item)
+        for i in range(0, count):
             item = self.volume_list_widget.item(i)
             if item.checkState() != Qt.Checked:
                 all_checked = False
                 break
+
         self.select_all_btn_vol.setChecked(all_checked)
         self.select_all_btn_vol.setEnabled(True)
 
     def toggle_all_volumes_dialog(self, checked):
-        """Setzt alle deaktivierbaren Volumes auf den Zustand von checked."""
+        """Setzt ALLE Volumes auf den Zustand von checked."""
         count = self.volume_list_widget.count()
-        for i in range(1, count):  # erstes überspringen
+        # ⭐ v2.3.0: ALLE Volumes togglen (kein Skip für erstes Item)
+        for i in range(0, count):
             item = self.volume_list_widget.item(i)
             item.setCheckState(Qt.Checked if checked else Qt.Unchecked)
         self.update_select_all_button_state()
@@ -13313,9 +14006,7 @@ class ConfigDialog(QDialog):
                         item = QListWidgetItem(name)
                         item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
                         item.setCheckState(Qt.Checked)
-                        if self.volume_list_widget.count() == 0:
-                            item.setFlags(item.flags() & ~Qt.ItemIsUserCheckable)
-                            item.setCheckState(Qt.Checked)
+                        # ⭐ v2.3.0: Kein Zwangs-Häkchen mehr
                         self.volume_list_widget.addItem(item)
                         added += 1
 
@@ -13332,7 +14023,6 @@ class ConfigDialog(QDialog):
                         "Volumes hinzugefügt", f"{added} neue Volumes"
                     )
                 else:
-                    # Keine neuen — aber welche gefunden
                     self._set_volume_detect_status(
                         "partial",
                         found=len(detected),
@@ -13353,9 +14043,8 @@ class ConfigDialog(QDialog):
             self.logger.log_error("Volume detection failed", str(e), e)
             self._set_volume_detect_status("failed")
         finally:
-            # Button wieder aktivieren
             self.detect_btn.setEnabled(True)
-            if 'original_btn_text' in locals():
+            if "original_btn_text" in locals():
                 self.detect_btn.setText(original_btn_text)
             self.detect_btn.repaint()
             QApplication.processEvents()
@@ -13522,14 +14211,15 @@ class ConfigDialog(QDialog):
         name = name.strip()
         for i in range(self.volume_list_widget.count()):
             if self.volume_list_widget.item(i).text() == name:
-                QMessageBox.warning(self, tr("volumes_add"), tr("volumes_name_exists"))
+                QMessageBox.warning(
+                    self, tr("volumes_add"), tr("volumes_name_exists")
+                )
                 return
+
         item = QListWidgetItem(name)
         item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
         item.setCheckState(Qt.Checked)
-        if self.volume_list_widget.count() == 0:
-            item.setFlags(item.flags() & ~Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked)
+        # ⭐ v2.3.0: Kein Zwangs-Häkchen mehr
         self.volume_list_widget.addItem(item)
         self.update_select_all_button_state()
 
@@ -13564,7 +14254,6 @@ class ConfigDialog(QDialog):
         item = self.volume_list_widget.takeItem(row)
         self.volume_list_widget.insertItem(row - 1, item)
         self.volume_list_widget.setCurrentRow(row - 1)
-        self._fix_first_item_flags()
 
     def move_volume_down(self):
         """Verschiebt das ausgewählte Volume eine Position nach unten."""
@@ -13574,17 +14263,6 @@ class ConfigDialog(QDialog):
         item = self.volume_list_widget.takeItem(row)
         self.volume_list_widget.insertItem(row + 1, item)
         self.volume_list_widget.setCurrentRow(row + 1)
-        self._fix_first_item_flags()
-
-    def _fix_first_item_flags(self):
-        """Stellt sicher, dass das erste Item immer aktiv und nicht deaktivierbar ist."""
-        if self.volume_list_widget.count() > 0:
-            first = self.volume_list_widget.item(0)
-            first.setFlags(first.flags() & ~Qt.ItemIsUserCheckable)
-            first.setCheckState(Qt.Checked)
-            for i in range(1, self.volume_list_widget.count()):
-                item = self.volume_list_widget.item(i)
-                item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
 
     ### Tab Zeiteinstellungen
 
@@ -13607,6 +14285,64 @@ class ConfigDialog(QDialog):
         self.auto_shutdown_spin.setRange(10, 600)
         self.auto_shutdown_spin.setSuffix(" s")
         time_layout.addWidget(self.auto_shutdown_spin, row, 1)
+
+        # ═══════════════════════════════════════════════════════
+        # ⭐ Auto-Shutdown-Ziel (Mac+NAS vs. Nur NAS)
+        # ═══════════════════════════════════════════════════════
+        row += 1
+        self.auto_shutdown_target_label = QLabel(
+            tr("config_auto_shutdown_target")
+        )
+        self.time_labels["auto_shutdown_target"] = self.auto_shutdown_target_label
+        time_layout.addWidget(self.auto_shutdown_target_label, row, 0)
+
+        target_container = QWidget()
+        target_layout = QHBoxLayout(target_container)
+        target_layout.setContentsMargins(0, 0, 0, 0)
+        target_layout.setSpacing(10)
+
+        # ─── 4 Radio-Buttons ───
+        radio_style = (
+            "QRadioButton { color: #ffffff; font-size: 12px; padding: 4px; }"
+        )
+
+        self.target_both_radio = QRadioButton(
+            tr("config_auto_shutdown_target_both")
+        )
+        self.target_both_radio.setStyleSheet(radio_style)
+        target_layout.addWidget(self.target_both_radio)
+
+        self.target_nas_radio = QRadioButton(
+            tr("config_auto_shutdown_target_nas")
+        )
+        self.target_nas_radio.setStyleSheet(radio_style)
+        target_layout.addWidget(self.target_nas_radio)
+
+        self.target_mac_radio = QRadioButton(
+            tr("config_auto_shutdown_target_mac")   # ⬅️ NEU
+        )
+        self.target_mac_radio.setStyleSheet(radio_style)
+        target_layout.addWidget(self.target_mac_radio)
+
+        self.target_none_radio = QRadioButton(
+            tr("config_auto_shutdown_target_none")  # ⬅️ NEU
+        )
+        self.target_none_radio.setStyleSheet(radio_style)
+        target_layout.addWidget(self.target_none_radio)
+
+        target_layout.addStretch()
+        time_layout.addWidget(target_container, row, 1)
+
+        # Hinweis
+        row += 1
+        self.auto_shutdown_target_hint = QLabel(
+            tr("config_auto_shutdown_target_hint")
+        )
+        self.auto_shutdown_target_hint.setStyleSheet(
+            "color: #888888; font-size: 10px; padding: 2px 2px 2px 4px;"
+        )
+        self.auto_shutdown_target_hint.setWordWrap(True)
+        time_layout.addWidget(self.auto_shutdown_target_hint, row, 0, 1, 2)
 
         row += 1
         label = QLabel(tr("config_auto_start"))
@@ -13757,7 +14493,7 @@ class ConfigDialog(QDialog):
             # Volumes-Tab
             self.volumes_group.setTitle(tr("config_volumes_group"))
             self.volumes_title_label.setText(tr("volumes_title"))
-            self.volumes_hint.setText(tr("volumes_hint"))
+            self.volumes_hint.setText(tr("volumes_hint_v2"))
             self.detect_btn.setText(tr("volumes_auto_detect"))
             self.add_btn.setText(tr("volumes_add"))
             self.delete_btn.setText(tr("volumes_delete"))
@@ -13769,7 +14505,35 @@ class ConfigDialog(QDialog):
             self.time_group.setTitle(tr("config_time_group"))
             if "auto_shutdown" in self.time_labels:
                 self.time_labels["auto_shutdown"].setText(tr("config_auto_shutdown"))
+            if "auto_shutdown_target" in self.time_labels:
+                self.time_labels["auto_shutdown_target"].setText(
+                    tr("config_auto_shutdown_target")
+                )
+            if hasattr(self, "target_both_radio"):
+                self.target_both_radio.setText(
+                    tr("config_auto_shutdown_target_both")
+                )
+            if hasattr(self, "target_nas_radio"):
+                self.target_nas_radio.setText(
+                    tr("config_auto_shutdown_target_nas")
+                )
+            if hasattr(self, "target_mac_radio"):
+                self.target_mac_radio.setText(
+                    tr("config_auto_shutdown_target_mac")    # ⬅️ NEU
+                )
+            if hasattr(self, "target_none_radio"):
+                self.target_none_radio.setText(
+                    tr("config_auto_shutdown_target_none")   # ⬅️ NEU
+                )
+                self.target_nas_radio.setText(
+                    tr("config_auto_shutdown_target_nas")
+                )
+            if hasattr(self, "auto_shutdown_target_hint"):
+                self.auto_shutdown_target_hint.setText(
+                    tr("config_auto_shutdown_target_hint")
+                )
             if "auto_start" in self.time_labels:
+                self.time_labels["auto_start"].setText(tr("config_auto_start"))
                 self.time_labels["auto_start"].setText(tr("config_auto_start"))
             if "wol_wait" in self.time_labels:
                 self.time_labels["wol_wait"].setText(tr("config_wol_wait"))
@@ -13903,6 +14667,19 @@ class ConfigDialog(QDialog):
         self.load_volumes_into_list()
 
         self.auto_shutdown_spin.setValue(self.config.get("auto_shutdown_delay", 120))
+
+        # ⭐ Auto-Shutdown-Ziel laden
+        target = self.config.get("auto_shutdown_target", "both")
+        if target == "nas_only":
+            self.target_nas_radio.setChecked(True)
+        elif target == "mac_only":
+            self.target_mac_radio.setChecked(True)   # ⬅️ NEU
+        elif target == "none":
+            self.target_none_radio.setChecked(True)  # ⬅️ NEU
+        else:
+            self.target_both_radio.setChecked(True)
+            self.target_both_radio.setChecked(True)
+
         self.auto_start_spin.setValue(self.config.get("auto_start_delay", 120))
         self.wol_wait_spin.setValue(self.config.get("wol_wait_time", 180))
         self.smb_wait_spin.setValue(self.config.get("smb_wait_time", 30))
@@ -13969,8 +14746,42 @@ class ConfigDialog(QDialog):
                 {"name": item.text(), "checked": (item.checkState() == Qt.Checked)}
             )
 
+        # ⭐ v2.3.0: Warnung, wenn kein Volume aktiviert ist
+        has_active_volume = any(v["checked"] for v in volume_data)
+        if volume_data and not has_active_volume:
+            if not self._msgbox_question(
+                tr("warning_title"),
+                tr("warning_no_volumes_selected"),
+            ):
+                self.logger.log_action(
+                    "Speichern abgebrochen: Keine Volumes aktiviert"
+                )
+                return
+            self.logger.log_action(
+                "Speichern trotz leerer Volume-Auswahl bestätigt"
+            )
+            item = self.volume_list_widget.item(i)
+            volume_data.append(
+                {"name": item.text(), "checked": (item.checkState() == Qt.Checked)}
+            )
+
         # Zeiteinstellungen
         auto_shutdown = self.auto_shutdown_spin.value()
+
+        # ⭐ Auto-Shutdown-Ziel auslesen
+        if self.target_none_radio.isChecked():
+            auto_shutdown_target = "none"
+        elif self.target_mac_radio.isChecked():
+            auto_shutdown_target = "mac_only"
+        elif self.target_nas_radio.isChecked():
+            auto_shutdown_target = "nas_only"
+        else:
+            auto_shutdown_target = "both"
+        self.logger.log_action(
+            "Auto-Shutdown-Ziel ausgelesen",
+            f"Wert: {auto_shutdown_target}",
+        )
+
         auto_start = self.auto_start_spin.value()
         wol_wait = self.wol_wait_spin.value()
         smb_wait = self.smb_wait_spin.value()
@@ -13992,6 +14803,7 @@ class ConfigDialog(QDialog):
         self.config.set("volume_list", [v["name"] for v in volume_data])
         self.config.set("volume_list_with_state", volume_data)
         self.config.set("auto_shutdown_delay", auto_shutdown)
+        self.config.set("auto_shutdown_target", auto_shutdown_target)   # ⬅️ NEU
         self.config.set("auto_start_delay", auto_start)
         self.config.set("wol_wait_time", wol_wait)
         self.config.set("smb_wait_time", smb_wait)
@@ -14030,6 +14842,43 @@ class ConfigDialog(QDialog):
                 self,
                 tr("msg_reset_title"),
                 tr("msg_reset_done"),
+            )
+
+    def reload_after_profile_change(self):
+        """
+        Wird vom eingebetteten ProfileDialog aufgerufen, wenn dort
+        ein anderes Profil als aktiv gesetzt wurde.
+
+        Lädt die Config neu und aktualisiert die Werte in allen Tabs.
+        """
+        try:
+            self.logger.log_action(
+                "ConfigDialog: Profilwechsel erkannt – lade Werte neu"
+            )
+
+            # ─── Config neu laden ───
+            self.config.load_config()
+
+            # ─── Werte in alle Felder laden ───
+            self.load_values()
+
+            # ─── Volumes-Liste neu laden ───
+            self.load_volumes_into_list()
+
+            # ─── Aktiven Profilnamen im Header aktualisieren ───
+            profile_name = self.config.get_active_profile_name() or "Kein Profil"
+            if self.profile_header_label:
+                self.profile_header_label.setText(
+                    f"📌 {tr('config_profile_active')}: {profile_name}"
+                )
+
+            self.logger.log_action(
+                "ConfigDialog nach Profilwechsel aktualisiert",
+                f"Aktives Profil: {profile_name}",
+            )
+        except Exception as e:
+            self.logger.log_error(
+                "Fehler beim Aktualisieren nach Profilwechsel", str(e), e
             )
 
     def show_ssh_help(self):
@@ -14517,7 +15366,7 @@ class ConfigDialog(QDialog):
         """Öffnet den Ordner der JSON-Konfigurationsdatei im Finder. Erstellt den Ordner falls nötig."""
         path = (
             self.config.get_json_path()
-        )  # z.B. /Users/macbinh/Library/Application Support/AnyNasPy/synaspy_config.json
+        )  # z.B. /Users/macbinh/Library/Application Support/AnyNasPy/anynaspy_config.json
         folder = os.path.dirname(
             path
         )  # /Users/macbinh/Library/Application Support/AnyNasPy
@@ -14620,7 +15469,7 @@ class ConfigDialog(QDialog):
     def create_ssh_keypair(self):
         """Erstellt ein neues SSH-Key-Paar mit individuellem Namen und Passphrase."""
         ssh_dir = os.path.expanduser("~/.ssh")
-        base_name = "synaspy_rsa"
+        base_name = "anynaspy_rsa"
         private_key = os.path.join(ssh_dir, base_name)
 
         if not os.path.exists(ssh_dir):
@@ -14644,7 +15493,7 @@ class ConfigDialog(QDialog):
                     tr("ssh_key_create_title"),
                     tr("ssh_key_enter_name"),
                     QLineEdit.Normal,
-                    "synaspy_rsa_2",
+                    "anynaspy_rsa_2",
                 )
                 if ok and new_name.strip():
                     if new_name.strip().endswith(".pub"):
@@ -14848,6 +15697,7 @@ class ConfigDialog(QDialog):
         msg.button(QMessageBox.Yes).setText(tr("btn_yes"))
         msg.button(QMessageBox.No).setText(tr("btn_no"))
         return msg.exec_() == QMessageBox.Yes
+
 
 # =======================================
 # PROFIL-DIALOG
@@ -15323,6 +16173,12 @@ class ProfileDialog(QDialog):
                 )
                 self.status_label.setStyleSheet("color: #FF6B00;")
                 self.logger.log_action("Profil gelöscht", profile_name)
+
+                # ⭐ Parent informieren
+                if self.parent_app and hasattr(
+                    self.parent_app, "reload_after_profile_change"
+                ):
+                    self.parent_app.reload_after_profile_change()
             else:
                 self.status_label.setText(tr("config_profile_delete_failed"))
                 self.status_label.setStyleSheet("color: #FF0000;")
@@ -15364,8 +16220,12 @@ class ProfileDialog(QDialog):
             self.status_label.setStyleSheet("color: #4CAF50;")
             self.logger.log_action("Profil umbenannt", f"{old_name} -> {new_name}")
 
-            if self.parent_app and hasattr(self.parent_app, "refresh_ui"):
-                self.parent_app.refresh_ui()
+            # ⭐ Parent informieren
+            if self.parent_app:
+                if hasattr(self.parent_app, "reload_after_profile_change"):
+                    self.parent_app.reload_after_profile_change()
+                if hasattr(self.parent_app, "refresh_ui"):
+                    self.parent_app.refresh_ui()
         else:
             self.status_label.setText(tr("config_profile_rename_failed"))
             self.status_label.setStyleSheet("color: #FF0000;")
@@ -15456,8 +16316,24 @@ class ProfileDialog(QDialog):
             self.status_label.setStyleSheet("color: #4CAF50;")
             self.logger.log_action("Profil aktiviert", profile.name)
 
-            # Parent aktualisieren
-            if self.parent_app and hasattr(self.parent_app, "refresh_ui"):
+            # ─── Parent aktualisieren ───
+            # Der Parent kann der ConfigDialog (eingebettet) ODER
+            # AnyNasPy (eigenständiger Dialog) sein.
+            if self.parent_app:
+                # Fall 1: ConfigDialog (eingebettet als Tab)
+                if hasattr(self.parent_app, "reload_after_profile_change"):
+                    self.parent_app.reload_after_profile_change()
+                    self.logger.log_action(
+                        "ConfigDialog über Profilwechsel informiert"
+                    )
+
+                # Fall 2: AnyNasPy (eigenständiger Dialog)
+                if hasattr(self.parent_app, "refresh_ui"):
+                    self.parent_app.refresh_ui()
+                if hasattr(self.parent_app, "say_message"):
+                    self.parent_app.say_message(
+                        tr("say_profile_changed").format(profile.name)
+                    )
                 self.parent_app.refresh_ui()
                 if hasattr(self.parent_app, "say_message"):
                     self.parent_app.say_message(
@@ -15799,7 +16675,7 @@ class InfoDialog(QDialog):
         main_layout.addLayout(header_layout)
 
         # Untertitel (wie im Hauptfenster)
-        subtitle_label = QLabel("NAS Management Tool")
+        subtitle_label = QLabel("Universal NAS Management Tool")
         subtitle_label.setObjectName("subtitle_label")
         subtitle_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(subtitle_label)
@@ -15892,7 +16768,7 @@ class InfoDialog(QDialog):
     def _get_impressum_text(self):
         """Gibt den Impressumstext zurück (String ist eingerückt!)."""
         return textwrap.dedent(f"""\
-            AnyNasPy NAS Management Tool
+            AnyNasPy - Universal NAS Management Tool
 
             Entwickler: {self.AUTHOR}
             Kontakt: {self.CONTACT}
@@ -16659,7 +17535,9 @@ class AnyNasPy(QMainWindow):
         LANG.add_listener(self.update_ui_language)
 
         self._auto_shutdown_allowed = False
-        self._paused_timeout_counter = 0   # gemerkter Zählerstand bei Pause
+        self._paused_timeout_counter = 0
+        self._server_up_processed = False    # ⬅️ NEU: verhindert doppelten serverIsUp
+        self._mounting_in_progress = False   # ⬅️ NEU: verhindert doppelten Mount
 
         # 1. ZUERST Konfiguration laden
         self.config = Config()
@@ -16750,8 +17628,14 @@ class AnyNasPy(QMainWindow):
         # Wenn der Mac herunterfährt (durch sudo shutdown), beendet das System
         # alle Prozesse per SIGTERM. Damit die der scheduled_timer
         # sauber beendet werden können.
-        signal.signal(signal.SIGTERM, self._sigterm_handler)
-        signal.signal(signal.SIGINT, self._sigterm_handler)
+        signal.signal(
+            signal.SIGTERM,
+            lambda sig, frame: self._sigterm_handler(sig, frame),
+        )
+        signal.signal(
+            signal.SIGINT,
+            lambda sig, frame: self._sigterm_handler(sig, frame),
+        )
 
     def initUI(self):
         """Initialisiert die Benutzeroberfläche."""
@@ -17044,7 +17928,7 @@ class AnyNasPy(QMainWindow):
             self.logger.log_error("Logo nicht gefunden", f"Pfad: {logo_path}")
 
         # Titel in der Mitte
-        title_label = QLabel("Synology NAS Management")
+        title_label = QLabel("Universal NAS Management")
         title_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #ffffff;")
         title_label.setAlignment(Qt.AlignCenter)
         header_layout.addWidget(title_label)
@@ -17573,19 +18457,14 @@ class AnyNasPy(QMainWindow):
 
             # Volumes mit Zuständen aus der Config holen
             volumes_with_state = self.config.get_volumes_with_state()
-            # Sicherstellen, dass das erste Volume (Haupt-Volume) aktiv ist
-            if volumes_with_state:
-                volumes_with_state[0]["checked"] = True
 
             # Checkboxen erstellen
-            for i, entry in enumerate(volumes_with_state):
+            for entry in volumes_with_state:
                 name = entry.get("name", "")
                 checked = entry.get("checked", True)
                 checkbox = QCheckBox(name)
                 checkbox.setChecked(checked)
-                if i == 0:  # Erstes Volume = Haupt-Volume
-                    checkbox.setEnabled(False)
-                    checkbox.setChecked(True)
+                # ⭐ v2.3.0: Kein Zwangs-Häkchen mehr
                 self.volume_checkboxes[name] = checkbox
                 layout.addWidget(checkbox)
 
@@ -17594,7 +18473,7 @@ class AnyNasPy(QMainWindow):
             # "Alle auswählen"-Button zurücksetzen
             self.select_all_btn.setChecked(False)
 
-            # Aktualisierte Volumenliste speichern (für spätere Referenz)
+            # Aktualisierte Volumenliste speichern
             self.all_volumes = [v["name"] for v in volumes_with_state]
 
         except Exception as e:
@@ -17745,7 +18624,11 @@ class AnyNasPy(QMainWindow):
                     self.logger.log_action(
                         "Sprachausgabe Timeout", clean_message[:50]
                     )
+                finally:
+                    # ⭐ GUI-Update nach der Sprachausgabe
+                    QApplication.processEvents()
             else:
+                subprocess.Popen(args)
                 subprocess.Popen(args)
 
             self.logger.log_action(
@@ -17802,10 +18685,44 @@ class AnyNasPy(QMainWindow):
 
     def say_timer_status(self):
         """Spricht den aktuellen Timer-Status mit Verzögerung."""
+        target = self.config.get("auto_shutdown_target", "both")
+
+        # # ⭐ Logging zur Diagnose
+        # self.logger.log_action(
+        #     "say_timer_status aufgerufen",
+        #     f"target='{target}', "
+        #     f"server_online={getattr(self, 'server_online', '?')}, "
+        #     f"timeout_limit={self.timeout_limit}",
+        # )
+
+        # ⭐ Bei Ziel "none" keine Sprachausgabe
+        if target == "none":
+            self.logger.log_action(
+                "Sprachausgabe übersprungen (Ziel: none)"
+            )
+            return
+
         if self.server_online:
-            message = tr("say_timer_shutdown").format(self.timeout_limit)
+            if target == "nas_only":
+                message = tr("say_timer_shutdown_nas").format(
+                    self.timeout_limit
+                )
+            elif target == "mac_only":
+                message = tr("say_timer_shutdown_mac").format(
+                    self.timeout_limit
+                )
+            else:
+                message = tr("say_timer_shutdown_both").format(
+                    self.timeout_limit
+                )
         else:
             message = tr("say_timer_start").format(self.timeout_limit)
+
+        # ⭐ Log welcher Text gesprochen wird
+        self.logger.log_action(
+            "Sprachausgabe Auto-Timer",
+            f"'{message}'",
+        )
 
         # Warte 2 Sekunden und verwende die normale say_message Methode
         QTimer.singleShot(2000, lambda: self.say_message(message))
@@ -18170,11 +19087,22 @@ class AnyNasPy(QMainWindow):
         """
         Prüft ohne UI-Interaktion, ob die Voraussetzungen für einen
         Mac-Shutdown erfüllt sind.
-
-        Rückgabe:
-            True  → NOPASSWD-Regel oder Keychain-Passwort vorhanden
-            False → Keines von beiden → Auto-Timer darf nicht starten
         """
+        # ⭐ Bei Ziel "none" ist kein Passwort nötig
+        target = self.config.get("auto_shutdown_target", "both")
+        if target == "none":
+            self.logger.log_action(
+                "Auto-Shutdown-Check: Ziel 'none' – keine Voraussetzung nötig"
+            )
+            return True
+
+        # Bei Ziel "nas_only" ebenfalls kein Passwort nötig
+        if target == "nas_only":
+            self.logger.log_action(
+                "Auto-Shutdown-Check: Ziel 'nas_only' – kein Mac-Shutdown"
+            )
+            return True
+
         # 1. NOPASSWD-Regel prüfen
         if self._has_nopasswd_sudo():
             self.logger.log_action(
@@ -18263,6 +19191,23 @@ class AnyNasPy(QMainWindow):
         Shutdown-Versuch durchgeführt.
         """
         try:
+            # ⭐ Bei Ziel "none" → Timer nicht starten
+            target = self.config.get("auto_shutdown_target", "both")
+            if target == "none":
+                self.logger.log_action(
+                    "Auto-Timer deaktiviert (Ziel: none)"
+                )
+                # Statt Timer zu starten, Hinweis im Label
+                self.status_label.setText(
+                    tr("status_auto_timer_disabled")
+                )
+                self.status_label.setStyleSheet(
+                    "color: #888888; font-size: 13px; font-weight: bold; "
+                    "padding: 8px; background-color: #1a1a1a; "
+                    "border: 1px solid #333; border-radius: 4px; margin: 5px;"
+                )
+                return
+
             # ═══════════════════════════════════════════════════
             # OFFLINE-MODUS: Auto-Timer darf immer starten
             # ═══════════════════════════════════════════════════
@@ -18367,8 +19312,7 @@ class AnyNasPy(QMainWindow):
         return True
 
     def _start_auto_timer(self):
-        """Startet
-         den Auto-Timer mit einem sicheren Hinweis im Status-Label."""
+        """Startet den Auto-Timer mit einem sicheren Hinweis im Status-Label."""
         try:
             self._auto_shutdown_allowed = True
             self.timeout_counter = 0
@@ -18380,6 +19324,57 @@ class AnyNasPy(QMainWindow):
                 f"Verzögerung: {self.timeout_limit}s"
             )
             self.say_timer_status()
+
+            # ⭐ Status-Label SOFORT korrekt setzen – abhängig vom Server-Status
+            try:
+                if getattr(self, "server_online", False):
+                    target = self.config.get("auto_shutdown_target", "both")
+                    if target == "nas_only":
+                        self.status_label.setText(
+                            tr("timer_shutdown_nas").format(self.timeout_limit)
+                        )
+                    elif target == "mac_only":
+                        self.status_label.setText(
+                            tr("timer_shutdown_mac").format(self.timeout_limit)
+                        )
+                    elif target == "none":
+                        # Wird nicht erreicht, weil _start_auto_timer bei "none"
+                        # gar nicht aufgerufen wird
+                        pass
+                    else:
+                        self.status_label.setText(
+                            tr("timer_shutdown_both").format(self.timeout_limit)
+                        )
+                if getattr(self, "server_online", False):
+                    target = self.config.get("auto_shutdown_target", "both")
+                    if target == "nas_only":
+                        self.status_label.setText(
+                            tr("timer_shutdown_nas").format(self.timeout_limit)
+                        )
+                    else:
+                        self.status_label.setText(
+                            tr("timer_shutdown_both").format(self.timeout_limit)
+                        )
+                    self.logger.log_action(
+                        "Status-Label gesetzt",
+                        f"timer_shutdown, {self.timeout_limit}s"
+                    )
+                else:
+                    self.status_label.setText(
+                        tr("timer_start").format(self.timeout_limit)
+                    )
+                    self.logger.log_action(
+                        "Status-Label gesetzt",
+                        f"timer_start, {self.timeout_limit}s"
+                    )
+                self.status_label.repaint()
+                QApplication.processEvents()
+            except Exception as label_err:
+                self.logger.log_error(
+                    "Fehler beim Setzen des Status-Labels",
+                    str(label_err),
+                    label_err,
+                )
 
             # Stop-Button-Optik aktualisieren
             if hasattr(self, "stop_btn"):
@@ -18806,7 +19801,7 @@ class AnyNasPy(QMainWindow):
             if self.auto_timer.isActive():
                 self.auto_timer.stop()
             self.say_message(tr("status_scheduled_triggered").format(target))
-            self.handleChoice(target)
+            self.handleChoice(target, auto_triggered=True)
         elif target == "coffee":
             # Kein Shutdown → Auto-Timer wieder starten (Guard-geprüft)
             self.logger.log_action(
@@ -18921,17 +19916,18 @@ class AnyNasPy(QMainWindow):
 
             # 2. GUI aktualisieren
             self.volumes_title_label.setText(tr("volumes_title"))
-            self.volumes_title_label.setStyleSheet("font-weight: bold; color: #4CAF50;")
+            self.volumes_title_label.setStyleSheet(
+                "font-weight: bold; color: #4CAF50;"
+            )
 
-            main_vol = self.get_main_volume()
+            # ⭐ v2.3.0: Alle Volumes gleich behandeln (kein Haupt-Volume mehr)
             for volume_name, checkbox in self.volume_checkboxes.items():
-                if volume_name != main_vol:  # Dynamisch, nicht hartcodiert
-                    checkbox.setEnabled(True)
-                    checkbox.stateChanged.connect(
-                        lambda state, v=volume_name: self.on_volume_checkbox_changed(
-                            v, state
-                        )
+                checkbox.setEnabled(True)
+                checkbox.stateChanged.connect(
+                    lambda state, v=volume_name: self.on_volume_checkbox_changed(
+                        v, state
                     )
+                )
 
             self.select_all_btn.setEnabled(True)
             self.showAllButtons()
@@ -18947,19 +19943,39 @@ class AnyNasPy(QMainWindow):
                 f"Verzögerung: {self.timeout_limit}s",
             )
 
-            # 4. Auto-Timer starten, wenn Voraussetzungen erfüllt
-            #    (Online: Braucht Passwort für Mac-Shutdown)
-            if self._start_auto_timer_safe("handleOnline"):
-                self.say_timer_status()
+            # ⭐ Status-Label sofort aktualisieren (Ziel-abhängig)
+            target = self.config.get("auto_shutdown_target", "both")
+            if target == "nas_only":
+                self.status_label.setText(
+                    tr("timer_shutdown_nas").format(self.timeout_limit)
+                )
+            elif target == "mac_only":
+                self.status_label.setText(
+                    tr("timer_shutdown_mac").format(self.timeout_limit)
+                )
+            elif target == "none":
+                self.status_label.setText(
+                    tr("status_auto_timer_disabled")
+                )
             else:
-                self.logger.log_action(
-                    "Auto-Timer nicht gestartet (handleOnline, keine Voraussetzungen)"
+                self.status_label.setText(
+                    tr("timer_shutdown_both").format(self.timeout_limit)
                 )
 
-            self._update_scheduled_button_tooltip()
-            self._update_scheduled_button_text()
+            # 4. Auto-Timer starten — nur wenn Ziel ≠ "none"
+            if target != "none":
+                if self._start_auto_timer_safe("handleOnline"):
+                    self.say_timer_status()
+                else:
+                    self.logger.log_action(
+                        "Auto-Timer nicht gestartet "
+                        "(handleOnline, keine Voraussetzungen)"
+                    )
+            else:
+                self.logger.log_action(
+                    "Auto-Timer nicht gestartet (Ziel: none)"
+                )
 
-            # 5. JETZT die Timer-Sprachausgabe (NACH dem Setzen des Limits)
             # 5. Auto-Timer-Status nur ansagen, wenn kein Zeitgeber läuft
             if not getattr(self, "scheduled_active", False):
                 self.say_timer_status()
@@ -18968,6 +19984,9 @@ class AnyNasPy(QMainWindow):
                     "Auto-Timer-Sprachausgabe übersprungen "
                     "(Zeitgeber aktiv)"
                 )
+
+            self._update_scheduled_button_tooltip()
+            self._update_scheduled_button_text()
 
         except Exception as e:
             self.logger.log_error("Fehler im Online-Modus", str(e), e)
@@ -18986,13 +20005,14 @@ class AnyNasPy(QMainWindow):
 
             # 2. GUI aktualisieren
             self.volumes_title_label.setText(tr("volumes_title_offline"))
-            self.volumes_title_label.setStyleSheet("font-weight: bold; color: #888888;")
+            self.volumes_title_label.setStyleSheet(
+                "font-weight: bold; color: #888888;"
+            )
 
-            main_vol = self.get_main_volume()  # Dynamisch, nicht hartcodiert
+            # ⭐ v2.3.0: Alle Volumes gleich behandeln (kein Haupt-Volume mehr)
             for volume_name, checkbox in self.volume_checkboxes.items():
                 checkbox.setEnabled(True)
-                if volume_name != main_vol:  # Haupt-Volume wird nicht markiert
-                    checkbox.setToolTip(tr("volumes_mount_tooltip"))
+                checkbox.setToolTip(tr("volumes_mount_tooltip"))
 
             self.select_all_btn.setEnabled(True)
             self.select_all_btn.setStyleSheet("")
@@ -19006,8 +20026,20 @@ class AnyNasPy(QMainWindow):
             self.timeout_limit = self.config.get("auto_start_delay", 120)
 
             self.logger.log_action(
-                "Auto-Start Timer-Limit gesetzt", f"Verzögerung: {self.timeout_limit}s"
+                "Auto-Start Timer-Limit gesetzt",
+                f"Verzögerung: {self.timeout_limit}s",
             )
+
+            # ⭐ Status-Label sofort aktualisieren
+            target = self.config.get("auto_shutdown_target", "both")
+            if target == "none":
+                self.status_label.setText(
+                    tr("status_auto_timer_disabled")
+                )
+            else:
+                self.status_label.setText(
+                    tr("timer_start").format(self.timeout_limit)
+                )
 
             # 4. Auto-Timer starten — im Offline-Modus (WOL) immer
             self._auto_shutdown_allowed = True
@@ -19029,7 +20061,6 @@ class AnyNasPy(QMainWindow):
             self._update_scheduled_button_tooltip()
             self._update_scheduled_button_text()
 
-
         except Exception as e:
             self.logger.log_error("Fehler im Offline-Modus", str(e), e)
 
@@ -19040,7 +20071,6 @@ class AnyNasPy(QMainWindow):
             return
 
         # Nicht ausführen, wenn Auto-Shutdown nicht erlaubt ist
-        # (Default False = sicherer)
         if not getattr(self, "_auto_shutdown_allowed", False):
             return
 
@@ -19053,35 +20083,66 @@ class AnyNasPy(QMainWindow):
             remaining = int(self.timeout_limit) - self.timeout_counter
 
             if self.server_online:
-                self.status_label.setText(tr("timer_shutdown").format(remaining))
+                # ─── ONLINE: Auto-Shutdown ───
+                target = self.config.get("auto_shutdown_target", "both")
+
+                # ⭐ Bei "none" sollte der Timer nicht laufen — abstellen
+                if target == "none":
+                    self.auto_timer.stop()
+                    self.logger.log_action(
+                        "Auto-Timer gestoppt (Ziel: none)"
+                    )
+                    return
+
+                # ⭐ Ziel-abhängiger Text
+                if target == "nas_only":
+                    self.status_label.setText(
+                        tr("timer_shutdown_nas").format(remaining)
+                    )
+                elif target == "mac_only":
+                    self.status_label.setText(
+                        tr("timer_shutdown_mac").format(remaining)
+                    )
+                else:
+                    self.status_label.setText(
+                        tr("timer_shutdown_both").format(remaining)
+                    )
+
                 if self.timeout_counter >= self.timeout_limit:
                     self.auto_timer.stop()
                     self.logger.log_action(
-                        "Auto-Shutdown ausgelöst", "Timeout erreicht"
+                        "Auto-Shutdown ausgelöst",
+                        f"Timeout erreicht, Ziel: {target}",
                     )
-                    self.handleChoice("both")
+                    # ⭐ Ziel-abhängige Aktion
+                    if target == "nas_only":
+                        self.handleChoice("nas_only", auto_triggered=True)
+                    elif target == "mac_only":
+                        self.handleChoice("mac_only", auto_triggered=True)
+                    else:
+                        self.handleChoice("both", auto_triggered=True)
             else:
-                self.status_label.setText(tr("timer_start").format(remaining))
+                # ─── OFFLINE: Auto-Start ───
+                self.status_label.setText(
+                    tr("timer_start").format(remaining)
+                )
                 if self.timeout_counter >= self.timeout_limit:
                     self.auto_timer.stop()
-                    self.logger.log_action("Auto-Start ausgelöst", "Timeout erreicht")
-                    self.handleChoice("start_nas")
+                    self.logger.log_action(
+                        "Auto-Start ausgelöst", "Timeout erreicht"
+                    )
+                    self.handleChoice("start_nas", auto_triggered=True)
                     self.pause_btn.setVisible(False)
 
-            # Stop-Button-Zustand bei Bedarf aktualisieren
-            # (nur einmal pro Sekunde, nicht bei jedem Tick neu zeichnen)
+            # ─── Stop-Button-Zustand aktualisieren ───
+            # KEIN status_label.setText hier!
             if hasattr(self, "stop_btn"):
                 self.update_stop_button_state()
-                self.status_label.setText(tr("timer_start").format(remaining))
-                if self.timeout_counter >= self.timeout_limit:
-                    self.auto_timer.stop()
-                    self.logger.log_action("Auto-Start ausgelöst", "Timeout erreicht")
-                    self.handleChoice("start_nas")
-                    self.pause_btn.setVisible(False)
+
         except Exception as e:
             self.logger.log_error("Fehler im Auto-Select Timer", str(e), e)
 
-    def handleChoice(self, choice):
+    def handleChoice(self, choice, auto_triggered=False):
         """Verarbeitet Benutzeraktionen oder Auto-Aktionen."""
         try:
             self.logger.log_action(f"Benutzeraktion: {choice}")
@@ -19188,18 +20249,10 @@ class AnyNasPy(QMainWindow):
                 eject_success = self.ejectNetworkDrives()
 
                 if not eject_success:
-                    if not self._msgbox_question(
-                        tr("warning_title"),
-                        tr("warning_eject_failed_continue"),
-                    ):
-                        self.logger.log_action(
-                            "Shutdown abgebrochen nach Eject-Fehler"
-                        )
-                        self.is_operation_running = False
-                        self.checkServerStatus()
-                        return
+                    # ⭐ Kein Dialog mehr – nur Log, weiterfahren
                     self.logger.log_action(
-                        "User hat Shutdown trotz Eject-Fehler bestätigt"
+                        "Einige Volumes konnten nicht ausgeworfen werden – "
+                        "fahre trotzdem mit Shutdown fort"
                     )
                 else:
                     self.logger.log_action("Volumes erfolgreich ausgeworfen")
@@ -19246,20 +20299,11 @@ class AnyNasPy(QMainWindow):
                 eject_success = self.ejectNetworkDrives()
 
                 if not eject_success:
-                    if not self._msgbox_question(
-                        tr("warning_title"),
-                        tr("warning_eject_failed_continue"),
-                    ):
-                        self.logger.log_action(
-                            "NAS-Shutdown abgebrochen nach Eject-Fehler"
-                        )
-                        self.is_operation_running = False
-                        self.checkServerStatus()
-                        return
+                    # ⭐ Kein Dialog mehr – nur Log, weiterfahren
                     self.logger.log_action(
-                        "User hat NAS-Shutdown trotz Eject-Fehler bestätigt"
+                        "Einige Volumes konnten nicht ausgeworfen werden – "
+                        "fahre trotzdem mit NAS-Shutdown fort"
                     )
-
                 self.progress_bar.setValue(50)
 
                 # NAS herunterfahren
@@ -19615,9 +20659,20 @@ class AnyNasPy(QMainWindow):
 
     def waitForServerStart(self):
         """Startet einen Thread, der auf Server-Start wartet."""
+        # ⭐ Guard: Wenn schon ein Warte-Thread läuft, keinen zweiten starten
+        if hasattr(self, "wait_thread") and self.wait_thread.is_alive():
+            self.logger.log_action(
+                "Warte-Thread läuft bereits – kein zweiter Start"
+            )
+            return
+
+        # ⭐ Flag zurücksetzen — neue Session
+        self._server_up_processed = False
+
         self.wait_thread = threading.Thread(target=self._waitForServer)
         self.wait_thread.daemon = True
         self.wait_thread.start()
+        self.logger.log_action("Warte-Thread gestartet")
 
     def _waitForServer(self):
         """Thread-Funktion: Prüft regelmäßig, ob Server online ist."""
@@ -19677,15 +20732,28 @@ class AnyNasPy(QMainWindow):
     @pyqtSlot()
     def serverIsUp(self):
         """Wird aufgerufen, wenn Server erfolgreich gestartet wurde."""
+        # ⭐ Guard: serverIsUp nur einmal pro Session
+        if getattr(self, "_server_up_processed", False):
+            self.logger.log_action(
+                "serverIsUp: bereits verarbeitet – ignoriert"
+            )
+            return
+
+        self._server_up_processed = True
         try:
             self.logger.log_action("Server erfolgreich gestartet")
             self.say_message(tr("say_server_reachable"))
-            self.status_label.setText(tr("status_server_online"))
+
+            smb_wait = self.config.get("smb_wait_time", 30)
+            self.status_label.setText(
+                tr("status_waiting_smb").format(smb_wait)
+            )
+            self.status_label.repaint()
+            QApplication.processEvents()
 
             if self.progress_bar:
                 self.progress_bar.setValue(70)
 
-            smb_wait = self.config.get("smb_wait_time", 30)
             QTimer.singleShot(smb_wait * 1000, self._mountVolumesAfterDelay)
         except Exception as e:
             self.is_operation_running = False
@@ -19721,13 +20789,25 @@ class AnyNasPy(QMainWindow):
             self.logger.log_error("Fehler in on_volume_checkbox_changed", str(e), e)
 
     def get_main_volume(self):
-        """Gibt das erste Volume aus der Volume-Liste zurück (Haupt-Volume)."""
+        """
+        Gibt das erste Volume aus der Volume-Liste zurück.
+
+        ⭐ v2.3.0: Es gibt kein 'Haupt-Volume' mehr — alle Volumes
+        sind gleich behandelt. Diese Methode bleibt aus Kompatibilität
+        zu alten Aufrufen erhalten.
+        """
         if self.all_volumes:
             return self.all_volumes[0]
-        return "NAS Dokumente"  # Fallback, falls Liste leer
+        return ""
 
     def process_volume_change(self, volume_name, state):
-        """Verarbeitet Volume-Änderungen (Mounten/Auswerfen)."""
+        """
+        Verarbeitet Volume-Änderungen (Mounten/Auswerfen).
+
+        v2.3.0: Bei Fehler wird der Haken NICHT zurückgesetzt —
+        nur der Fehler wird geloggt. Der Nutzer entscheidet selbst,
+        ob er es nochmal versucht.
+        """
         try:
             if state:
                 self.logger.log_action("Volume mounten", volume_name)
@@ -19736,21 +20816,29 @@ class AnyNasPy(QMainWindow):
                 )
                 success = self.mount_single_volume(volume_name)
                 if not success:
-                    self.volume_checkboxes[volume_name].setChecked(False)
-                    self.logger.log_error("Volume mounten fehlgeschlagen", volume_name)
+                    # ⭐ Haken NICHT zurücksetzen — nur loggen
+                    self.logger.log_error(
+                        "Volume mounten fehlgeschlagen", volume_name
+                    )
                     self.say_message(tr("say_mount_error"))
-                    self.status_label.setText(tr("status_error").format(volume_name))
+                    self.status_label.setText(
+                        tr("status_error").format(volume_name)
+                    )
                 else:
                     self.logger.log_action("Volume gemountet", volume_name)
-                    self.say_message(tr("say_mount_volume").format(volume_name), wait=False)
-                    self.status_label.setText(tr("status_mounted").format(volume_name))
+                    self.say_message(tr("say_mount_volume").format(volume_name))
+                    self.status_label.setText(
+                        tr("status_mounted").format(volume_name)
+                    )
             else:
                 self.logger.log_action("Volume auswerfen", volume_name)
                 self.say_message(tr("say_unmount_volume").format(volume_name))
-                self.status_label.setText(tr("status_unmounting").format(volume_name))
+                self.status_label.setText(
+                    tr("status_unmounting").format(volume_name)
+                )
                 success = self.unmount_single_volume(volume_name)
                 if not success:
-                    self.volume_checkboxes[volume_name].setChecked(True)
+                    # ⭐ Haken NICHT wieder setzen — nur loggen
                     self.logger.log_error(
                         "Volume auswerfen fehlgeschlagen", volume_name
                     )
@@ -19767,16 +20855,12 @@ class AnyNasPy(QMainWindow):
             self.logger.log_error("Fehler in process_volume_change", str(e), e)
 
     def toggle_all_volumes(self, checked):
-        """Schaltet alle Volumes gleichzeitig um."""
-        main_vol = self.get_main_volume()
-        if checked:
-            for volume_name, checkbox in self.volume_checkboxes.items():
-                if volume_name != main_vol and not checkbox.isChecked():
-                    checkbox.setChecked(True)
-        else:
-            for volume_name, checkbox in self.volume_checkboxes.items():
-                if volume_name != main_vol and checkbox.isChecked():
-                    checkbox.setChecked(False)
+        """Schaltet alle Volumes gleichzeitig um (v2.3.0: kein Haupt-Volume mehr)."""
+        for volume_name, checkbox in self.volume_checkboxes.items():
+            if checked and not checkbox.isChecked():
+                checkbox.setChecked(True)
+            elif not checked and checkbox.isChecked():
+                checkbox.setChecked(False)
 
     def update_checkbox_status(self):
         """Aktualisiert Checkbox-Status basierend auf gemounteten Volumes."""
@@ -19784,11 +20868,8 @@ class AnyNasPy(QMainWindow):
             mount_result = subprocess.run(["mount"], capture_output=True, text=True)
             mounted_text = mount_result.stdout
 
-            main_vol = self.get_main_volume()
+            # ⭐ v2.3.0: Alle Volumes prüfen (kein Skip für Haupt-Volume)
             for volume_name, checkbox in self.volume_checkboxes.items():
-                if volume_name == main_vol:  # Dynamisch, nicht hartcodiert
-                    continue
-
                 is_mounted = volume_name in mounted_text
                 checkbox.blockSignals(True)
                 checkbox.setChecked(is_mounted)
@@ -19800,55 +20881,93 @@ class AnyNasPy(QMainWindow):
 
     def _mountVolumesAfterDelay(self):
         """Mountet Volumes nach Verzögerung."""
+        # ⭐ Guard: Mount nur einmal starten
+        if getattr(self, "_mounting_in_progress", False):
+            self.logger.log_action(
+                "Mount bereits im Gange – Doppelanforderung ignoriert"
+            )
+            return
+
+        self._mounting_in_progress = True
         try:
             self.logger.log_action("Starte Volume-Mounting")
             self.status_label.setText(tr("status_mounting"))
 
-            main_vol = self.get_main_volume()
-            volumes_to_mount = [main_vol]  # Haupt-Volume zuerst
-            for volume_name in self.startup_volumes:
-                if volume_name != main_vol and volume_name not in volumes_to_mount:
-                    volumes_to_mount.append(volume_name)
+            # ⭐ v2.3.0: Alle aktivierten Volumes mounten (kein Haupt-Volume mehr)
+            volumes_to_mount = list(self.startup_volumes)
+
+            if not volumes_to_mount:
+                self.logger.log_action(
+                    "Keine Volumes zum Mounten ausgewählt"
+                )
+                self.say_message(tr("say_mount_failed"))
+                self.status_label.setText(tr("status_mount_failed"))
+                self.is_operation_running = False
+                self._mounting_in_progress = False
+                QTimer.singleShot(2000, self.close)
+                return
 
             success_count = 0
             self.progress_bar.setValue(70)
             successfully_mounted = []
 
             mount_retries = self.config.get("mount_retries", 3)
+            total_volumes = len(volumes_to_mount)
 
             for i, volume_name in enumerate(volumes_to_mount):
+                # Status mit Fortschritt anzeigen
                 self.status_label.setText(
-                    tr("status_mounting_volume").format(volume_name)
+                    tr("status_mounting_progress").format(
+                        i + 1, total_volumes, volume_name
+                    )
                 )
+                self.status_label.repaint()
                 QApplication.processEvents()
-
-                # Haupt-Volume bekommt etwas mehr Zeit
-                if volume_name == main_vol:
-                    time.sleep(5)
 
                 success = self.mount_single_volume_with_retry(
                     volume_name, retries=mount_retries
                 )
+
                 if success:
                     success_count += 1
                     successfully_mounted.append(volume_name)
-                    self.logger.log_action("Volume erfolgreich gemountet", volume_name)
-                    self.say_message(tr("say_mount_volume").format(volume_name), wait=True)
+                    self.logger.log_action(
+                        "Volume erfolgreich gemountet", volume_name
+                    )
+                    self.status_label.setText(
+                        tr("status_mounted_progress").format(
+                            i + 1, total_volumes, volume_name
+                        )
+                    )
+                    self.status_label.repaint()
+                    QApplication.processEvents()
+                    self.say_message(
+                        tr("say_mount_volume").format(volume_name)
+                    )
+                    QApplication.processEvents()
                 else:
-                    self.logger.log_error("Volume mounten fehlgeschlagen", volume_name)
+                    self.logger.log_error(
+                        "Volume mounten fehlgeschlagen", volume_name
+                    )
+                    self.status_label.setText(
+                        tr("status_mount_failed_volume").format(volume_name)
+                    )
+                    self.status_label.repaint()
+                    QApplication.processEvents()
 
-                progress = 70 + int(((i + 1) / len(volumes_to_mount)) * 30)
+                progress = 70 + int(((i + 1) / total_volumes) * 30)
                 self.progress_bar.setValue(progress)
+                QApplication.processEvents()
                 time.sleep(3)
 
             self.progress_bar.setValue(100)
             if success_count > 0:
                 self.logger.log_action(
                     "Volume-Mounting abgeschlossen",
-                    f"{success_count} von {len(volumes_to_mount)} erfolgreich",
+                    f"{success_count} von {total_volumes} erfolgreich",
                 )
                 self.status_label.setText(
-                    f"{success_count} von {len(volumes_to_mount)} Volumes gemountet ✓"
+                    f"{success_count} von {total_volumes} Volumes gemountet ✓"
                 )
             else:
                 self.logger.log_error("Volume-Mounting komplett fehlgeschlagen")
@@ -19857,10 +20976,33 @@ class AnyNasPy(QMainWindow):
 
             # Operation beendet
             self.is_operation_running = False
+            self._mounting_in_progress = False
             QTimer.singleShot(2000, self.close)
         except Exception as e:
             self.logger.log_error("Fehler in _mountVolumesAfterDelay", str(e), e)
             self.is_operation_running = False
+            self._mounting_in_progress = False
+
+    def _is_smb_port_open(self, nas_ip: str, timeout: int = 3) -> bool:
+        """
+        Prüft, ob der SMB-Port (445) auf dem NAS erreichbar ist.
+
+        Wichtig: Wird VOR dem AppleScript-Mount aufgerufen, um zu
+        verhindern, dass macOS den "Verbindung fehlgeschlagen"-Dialog
+        zeigt (der entsteht, wenn mount volume auf einen noch nicht
+        bereiten SMB-Dienst trifft).
+        """
+        try:
+            # nc -z -w <timeout> <ip> 445
+            result = subprocess.run(
+                ["nc", "-z", "-w", str(timeout), nas_ip, "445"],
+                capture_output=True,
+                text=True,
+                timeout=timeout + 2,
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
 
     def mount_single_volume(self, volume_name):
         """Mountet ein einzelnes Volume über SMB."""
@@ -19886,50 +21028,86 @@ class AnyNasPy(QMainWindow):
             return False
 
     def mount_single_volume_with_retry(self, volume_name, retries=3):
-        """Mountet ein Volume mit Wiederholungsversuchen."""
+        """Mountet ein Volume mit Wiederholungsversuchen (via AppleScript)."""
         nas_user = self.config.get("nas_user")
         nas_ip = self.config.get("nas_ip")
 
         for attempt in range(retries):
             try:
                 if attempt > 0:
-                    wait_time = 5 * attempt
+                    wait_time = 3 * attempt
                     self.logger.log_action(
                         "Volume-Mount Wiederholung",
-                        f"{volume_name} Versuch {attempt+1}/{retries} nach {wait_time}s",
+                        f"{volume_name} Versuch {attempt+1}/{retries} "
+                        f"nach {wait_time}s",
                     )
                     time.sleep(wait_time)
 
-                smb_url = f"smb://{nas_user}@{nas_ip}/{volume_name}"
-                apple_script = f'try\n  mount volume "{smb_url}"\n  return "success"\non error err\n  return "error"\nend try'
-
-                result = subprocess.run(
-                    ["osascript", "-e", apple_script],
+                # ⭐ Ping-Check
+                ping_result = subprocess.run(
+                    ["ping", "-c", "1", "-t", "2", nas_ip],
                     capture_output=True,
                     text=True,
-                    timeout=30,
+                    timeout=3,
+                )
+                if ping_result.returncode != 0:
+                    self.logger.log_action(
+                        "NAS nicht erreichbar für Mount",
+                        f"{volume_name} – warte auf Server",
+                    )
+                    continue
+
+                # ⭐ Warm-up: SMB-Port (445) erreichbar?
+                # Verhindert den macOS-Dialog "Verbindung fehlgeschlagen"
+                if not self._is_smb_port_open(nas_ip, timeout=3):
+                    self.logger.log_action(
+                        "SMB-Port noch nicht offen",
+                        f"{volume_name} – warte auf SMB-Dienst",
+                    )
+                    time.sleep(2)
+                    continue
+
+                # ⭐ AppleScript-Mount mit 45 s Timeout
+                smb_url = f"smb://{nas_user}@{nas_ip}/{volume_name}"
+                apple_script = (
+                    f'try\n'
+                    f'  mount volume "{smb_url}"\n'
+                    f'  return "success"\n'
+                    f'on error err\n'
+                    f'  return "error: " & err\n'
+                    f'end try'
                 )
 
+                try:
+                    result = subprocess.run(
+                        ["osascript", "-e", apple_script],
+                        capture_output=True,
+                        text=True,
+                        timeout=45,   # ⬅️ 45 s statt 20 s
+                    )
+                except subprocess.TimeoutExpired:
+                    # ⭐ Sauberes terminate() statt kill -9
+                    # kill -9 hinterlässt hängende AppleEvents im Finder
+                    # → macOS zeigt den "Verbindung fehlgeschlagen"-Dialog
+                    self.logger.log_action(
+                        "AppleScript Mount Timeout – warte ab",
+                        f"{volume_name} Versuch {attempt+1}",
+                    )
+
                 if "success" in result.stdout:
-                    time.sleep(2)
+                    time.sleep(1)
                     mount_check = subprocess.run(
                         ["mount"], capture_output=True, text=True
                     )
                     if volume_name in mount_check.stdout:
                         return True
-                    else:
-                        self.logger.log_error(
-                            "Volume gemeldet aber nicht in mount-Liste", volume_name
-                        )
-                        continue
 
             except Exception as e:
                 self.logger.log_error(
-                    "Volume-Mount Versuch fehlgeschlagen",
+                    "Mount Fehler",
                     f"{volume_name} Versuch {attempt+1}: {e}",
                     e,
                 )
-                continue
 
         return False
 
@@ -20144,8 +21322,9 @@ class AnyNasPy(QMainWindow):
             # ═══════════════════════════════════════════════════════════
             for volume_name in remaining_volumes:
                 try:
-                    safe_name = volume_name.replace(" ", r"\ ")
-                    mount_point = f"/Volumes/{safe_name}"
+                    # ⭐ KEIN Backslash — bei subprocess.run ist es
+                    # ein einzelnes Argument, kein Shell-Befehl!
+                    mount_point = f"/Volumes/{volume_name}"
 
                     self.status_label.setText(
                         tr("status_unmounting").format(volume_name)
@@ -20340,14 +21519,12 @@ class AnyNasPy(QMainWindow):
             # Schritt 8: Ergebnis
             # ═══════════════════════════════════════════════════════════
             if hard_noch_da:
-                # Normale Volumes konnten nicht ausgeworfen werden
-                # → Warnung (aber kein Abbruch des Shutdowns hier —
-                # das macht der Aufrufer in handleChoice)
+                 # ⭐ Nur Log – keine Sprachausgabe, keine Warnung
                 self.logger.log_error(
                     "Volumes konnten nicht ausgeworfen werden",
                     f"{len(hard_noch_da)}: {', '.join(hard_noch_da)}",
                 )
-                self.say_message(tr("say_unmount_error"))
+                # self.say_message(tr("say_unmount_error"))
                 self.logger.log_action(
                     "=== ejectNetworkDrives ENDE (False) ==="
                 )
@@ -20382,6 +21559,49 @@ class AnyNasPy(QMainWindow):
                 "=== ejectNetworkDrives ENDE (Exception) ==="
             )
             return False
+
+    def _msgbox_question_with_timeout(self, title: str, text: str,
+                                      timeout_seconds: int = 3,
+                                      default_no: bool = True) -> bool:
+        """
+        Zeigt eine Ja/Nein-MessageBox mit Timeout.
+        Nach `timeout_seconds` wird automatisch `default_no` verwendet.
+
+        Rückgabe:
+            True  → Ja geklickt (oder Timeout mit default_no=False)
+            False → Nein geklickt (oder Timeout mit default_no=True)
+        """
+        msg = QMessageBox(self)
+        msg.setWindowTitle(title)
+        msg.setIcon(QMessageBox.Question)
+        msg.setText(text)
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+
+        if default_no:
+            msg.setDefaultButton(QMessageBox.No)
+        else:
+            msg.setDefaultButton(QMessageBox.Yes)
+
+        msg.button(QMessageBox.Yes).setText(tr("btn_yes"))
+        msg.button(QMessageBox.No).setText(tr("btn_no"))
+
+        # Timer für Auto-Close
+        timer = QTimer()
+        timer.setSingleShot(True)
+
+        def _timeout():
+            try:
+                msg.done(QMessageBox.Yes if not default_no else QMessageBox.No)
+            except Exception:
+                pass
+
+        timer.timeout.connect(_timeout)
+        timer.start(timeout_seconds * 1000)
+
+        result = msg.exec_()
+        timer.stop()
+
+        return result == QMessageBox.Yes
 
     def _is_volume_mounted(self, volume_name: str) -> bool:
         """Prüft, ob ein Volume aktuell gemountet ist."""
@@ -21184,7 +22404,7 @@ class AnyNasPy(QMainWindow):
         except Exception as e:
             print(f"Fehler bei automatischer Versionsprüfung: {e}")
 
-    def _sigterm_handler(signum, frame):
+    def _sigterm_handler(self, signum, frame):
         """Wird aufgerufen, wenn macOS die App beendet (z.B. beim Shutdown)."""
         try:
             if hasattr(self, "scheduled_caffeinate_proc") and self.scheduled_caffeinate_proc:
@@ -21262,6 +22482,34 @@ class AnyNasPy(QMainWindow):
 
             LANG.remove_listener(self.update_ui_language)
 
+            # ⭐ Laufende say-Prozesse killen
+            try:
+                subprocess.run(
+                    ["pkill", "-9", "say"],
+                    capture_output=True,
+                    timeout=2,
+                )
+                self.logger.log_action(
+                    "say-Prozesse beendet (closeEvent)"
+                )
+            except Exception:
+                pass
+
+            # ⭐ Hängende osascript-Prozesse SANFT beenden (kein -9!)
+            # kill -9 führt zu hängenden AppleEvents im Finder
+            # → macOS zeigt den "Verbindung fehlgeschlagen"-Dialog
+            try:
+                subprocess.run(
+                    ["pkill", "-TERM", "osascript"],
+                    capture_output=True,
+                    timeout=2,
+                )
+                self.logger.log_action(
+                    "osascript-Prozesse beendet (closeEvent)"
+                )
+            except Exception:
+                pass
+
             if hasattr(self, "scheduled_timer") and self.scheduled_timer.isActive():
                 self.scheduled_timer.stop()
             self._stop_scheduled_caffeinate()
@@ -21272,7 +22520,7 @@ class AnyNasPy(QMainWindow):
             if hasattr(self, "wait_thread") and self.wait_thread.is_alive():
                 self.wait_thread.join(timeout=1)
 
-            self.logger.log("=== SYNASPY BEENDET ===", "STOP")
+            self.logger.log("=== ANYNASPY BEENDET ===", "STOP")
             self.logger.flush()
             event.accept()
         except Exception as e:

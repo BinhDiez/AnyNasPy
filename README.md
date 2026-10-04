@@ -35,11 +35,11 @@ Bereich	Funktionen
 <tr>
 <td align="center" valign="top">
 <b>Server Offline</b><br>
-<img src="screenshots/screenshot_AnyNasPy1.png" width="400">
+<img src="screenshots/Server_offline.png" width="400">
 </td>
 <td align="center" valign="top">
 <b>Server Online</b><br>
-<img src="screenshots/screenshot_AnyNasPy13.png" width="400">
+<img src="screenshots/Server_online_auto.png" width="400">
 </td>
 </tr>
 </table>
@@ -55,11 +55,11 @@ Bereich	Funktionen
 <tr>
 <td align="center" valign="top">
 <b>Zeitgesteuertes Herunterfahren</b><br>
-<img src="screenshots/screenshot_AnyNasPy14.png" width="400">
+<img src="screenshots/Zeitsteuerung_Mac_NAS_Kaffee.png" width="400">
 </td>
 <td align="center" valign="top">
-<bCaffeinate Optionen</b><br>
-<img src="screenshots/screenshot_AnyNasPy3.png" width="400">
+<b>Countdown läuft</b><br>
+<img src="screenshots/Server_online_Countdown.png" width="400">
 </td>
 </tr>
 </table>
@@ -71,12 +71,28 @@ Bereich	Funktionen
 <table>
 <tr>
 <td align="center" valign="top">
+<b>Zeitsteuerung: Zielauswahl</b><br>
+<img src="screenshots/Zeitsteuerung_Ziel.png" width="400">
+</td>
+<td align="center" valign="top">
+<b>Zeitsteuerung: Caffeinate Optionen</b><br>
+<img src="screenshots/Zeitsteuerung_Kaffee.png" width="400">
+</td>
+</tr>
+</table>
+
+⸻
+
+
+<table>
+<tr>
+<td align="center" valign="top">
 <b>Allgemeine Einstellungen 1</b><br>
-<img src="screenshots/screenshot_AnyNasPy5.png" width="400">
+<img src="screenshots/Einstellungen_allgemein_1.png" width="400">
 </td>
 <td align="center" valign="top">
 <b>Allgemeine Einstellungen 2</b><br>
-<img src="screenshots/screenshot_AnyNasPy6.png" width="400">
+<img src="screenshots/Einstellungen_allgemein_2.png" width="400">
 </td>
 </tr>
 </table>
@@ -87,11 +103,11 @@ Bereich	Funktionen
 <tr>
 <td align="center" valign="top">
 <b>Laufwerke</b><br>
-<img src="screenshots/screenshot_AnyNasPy7.png" width="400">
+<img src="screenshots/Einstellungen_Volumes.png" width="400">
 </td>
 <td align="center" valign="top">
 <b>Zeiteinstellungen</b><br>
-<img src="screenshots/screenshot_AnyNasPy8.png" width="400">
+<img src="screenshots/Einstellungen_Zeit.png" width="400">
 </td>
 </tr>
 </table>
@@ -103,29 +119,15 @@ Bereich	Funktionen
 <tr>
 <td align="center" valign="top">
 <b>Serverprofil</b><br>
-<img src="screenshots/screenshot_AnyNasPy9.png" width="400">
+<img src="screenshots/Einstellungen_Server_Profile.png" width="400">
 </td>
 <td align="center" valign="top">
 <b>Startvorgang NAS</b><br>
-<img src="screenshots/screenshot_AnyNasPy10.png" width="400">
+<img src="screenshots/Mount_Volume.png" width="400">
 </td>
 </tr>
 </table>
 
-⸻
-
-<table>
-<tr>
-<td align="center" valign="top">
-<b>Serverprofil</b><br>
-<img src="screenshots/screenshot_AnyNasPy9.png" width="400">
-</td>
-<td align="center" valign="top">
-<b>Startvorgang Mounte NAS</b><br>
-<img src="screenshots/screenshot_AnyNasPy11.png" width="400">
-</td>
-</tr>
-</table>
 
 </details>
 
